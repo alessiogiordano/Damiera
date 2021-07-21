@@ -4,14 +4,13 @@ using UnityEngine;
 
 public class CameraManager : MonoBehaviour
 {
+    // Fields
     [SerializeField] private Transform viewport;
     [SerializeField] private Camera settings;
-    private enum Direction {
-        Neutral, Top, Bottom, Left, Right
-    }
     [SerializeField] private Direction direction = Direction.Neutral;
-    [SerializeField] private float speed = 1.0f;
+    [SerializeField] private float speed = 100.0f;
 
+    // Coroutines
     IEnumerator rotate() {
         while(true) {
             if (direction != Direction.Neutral) {
@@ -26,10 +25,10 @@ public class CameraManager : MonoBehaviour
                     yield return new WaitForSeconds(1.0f);
                 } else {
                     switch(direction) {
-                        case Direction.Left: viewport.Rotate(0.0f, -1.0f*speed, 0.0f, Space.World); break;
-                        case Direction.Right: viewport.Rotate(0.0f, 1.0f*speed, 0.0f, Space.World); break;
-                        case Direction.Top: viewport.Rotate(-1.0f*speed, 0.0f, 0.0f, Space.Self); break;
-                        case Direction.Bottom: viewport.Rotate(1.0f*speed, 0.0f, 0.0f, Space.Self); break;
+                        case Direction.Left: viewport.Rotate(0.0f, -1.0f*speed*Time.deltaTime, 0.0f, Space.World); break;
+                        case Direction.Right: viewport.Rotate(0.0f, 1.0f*speed*Time.deltaTime, 0.0f, Space.World); break;
+                        case Direction.Top: viewport.Rotate(-1.0f*speed*Time.deltaTime, 0.0f, 0.0f, Space.Self); break;
+                        case Direction.Bottom: viewport.Rotate(1.0f*speed*Time.deltaTime, 0.0f, 0.0f, Space.Self); break;
                     }
                     //viewport.rotation = Quaternion.Euler(new Vector3(viewport.rotation.eulerAngles.x, viewport.rotation.eulerAngles.y, 0));
                     yield return null;
@@ -39,12 +38,50 @@ public class CameraManager : MonoBehaviour
             }
         }
     }
-    // Start is called before the first frame update
-    void Start()
-    {
-        
+    // Singleton
+    private static CameraManager _shared;
+    public static CameraManager Shared {
+        get {
+            if(_shared==null)
+            {
+                _shared = GameObject.FindObjectOfType<CameraManager>();
+                if(_shared==null)
+                {
+                    Debug.LogError("Attempted to use non instantiated singleton");
+                }
+            }
+            return _shared;
+        }
     }
-    // Update is called once per frame
+    void Awake()
+    {
+        if(_shared==null)
+        {
+            _shared = this;
+            GameObject.DontDestroyOnLoad(this.gameObject);
+        }
+        else
+        {
+            GameObject.Destroy(this.gameObject);
+        }
+    }
+    // Handle Input
+    public void OnInputDown(Direction dir) {
+        if (direction == dir) return;
+        if (direction == Direction.Neutral) {
+            direction = dir;
+            StartCoroutine("rotate");
+        } else {
+            direction = dir;
+        }
+    }
+    public void OnInputUp(Direction dir) {
+        if (direction == dir) {
+            direction = Direction.Neutral;
+            StopCoroutine("rotate");
+        }
+    }
+    /*
     void Update()
     {
         // LeftArrow
@@ -116,4 +153,5 @@ public class CameraManager : MonoBehaviour
             }
         }
     }
+    */
 }
