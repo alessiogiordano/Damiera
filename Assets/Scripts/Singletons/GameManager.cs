@@ -5,10 +5,11 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private GameObject gameBoard;
+    private GameObject[] positionPool = new GameObject[33]; // Container + 32 Positions
     [SerializeField] private GameObject pedinaPrefab;
     [SerializeField] private Material pedinaBianca;
     [SerializeField] private Material pedinaNera;
-    private GameObject[] pedinaPool = new GameObject[24];
+    private GameObject[] pedinaPool = new GameObject[25]; // Container + 24 Items
 
     // Singleton
     private static GameManager _shared;
@@ -36,14 +37,83 @@ public class GameManager : MonoBehaviour
         {
             GameObject.Destroy(this.gameObject);
         }
+        // SetupValidPositions();
         SetupBoard();
     }
 
-    void SetupBoard() {
+    void SetupValidPositions()
+    {
+        // Clear if not empty
+        for (int i = 0; i < positionPool.Length; i++)
+        {
+            Destroy(positionPool[i]);
+        }
+        // Account for human error in designing the Texture
+        const float centerCorrection = 0.9990662932f;
+        const float lengthCorrection = 1.0209039548f;
+        // Setup Root Object
+        positionPool[0] = new GameObject("Posizioni Valide");
+        positionPool[0].transform.parent = gameBoard.transform;
+        const float rootOffset = (0.272f / 2) * (1.0f - centerCorrection);
+        positionPool[0].transform.localPosition = new Vector3(rootOffset, 0.0f, -rootOffset);
+        GameObject root = positionPool[0];
+        // Values
+        const float cellDimension = 0.03f * lengthCorrection;
+        const float startingPoint = cellDimension * 3.5f;
+        const float horizontalOffset = cellDimension * 2;
+        // Instantiate
+        for (int i = 0; i < 8; i++)
+        {
+            string[] columns = (i % 2 == 0) ? new string[] { "A", "C", "E", "G" } : new string[] { "B", "D", "F", "H" };
+            float startingX = startingPoint;
+            float startingZ = startingPoint - (cellDimension * i);
+            float oddRowOffset = (i % 2 == 0) ? 0 : cellDimension;
+            for (int j = 0; j < 4; j++)
+            {
+                float cellOffset = startingX - oddRowOffset - (horizontalOffset * j);
+                positionPool[i+1] = new GameObject(columns[j] + (i + 1));
+                positionPool[i+1].transform.parent = root.transform;
+                positionPool[i+1].transform.localPosition = new Vector3(cellOffset, 0.0f, startingZ);
+            }
+        }
+    }
+
+    void SetupBoard()
+    {
+        SetupBoard(BoardCell.defaultLayout);
+    }
+    void SetupBoard(BoardCell[] layout) {
+        if (layout.Length != 24)
+        {
+            Debug.Log("Malformed Board Layout");
+            return;
+        }
         // Clear if not empty
         for (int i = 0; i < pedinaPool.Length; i++)
         {
-            Destroy(pedinaPool[0]);
+            Destroy(pedinaPool[i]);
+        }
+        // Create Container
+        pedinaPool[0] = new GameObject("Pedine");
+        pedinaPool[0].transform.parent = gameBoard.transform;
+        pedinaPool[0].transform.localPosition = BoardCell.localCenterOffset;
+        GameObject root = pedinaPool[0];
+        for (int i = 0; i < 24; i++)
+        {
+            bool isWhite = i < 12;
+            pedinaPool[i] = Instantiate(pedinaPrefab);
+            pedinaPool[i].name = (isWhite) ? "Pedina Bianca n°" + (i + 1) :  "Pedina Nera n°" + (i - 11);
+            pedinaPool[i].transform.parent = root.transform;
+            pedinaPool[i].transform.localPosition = layout[i].localPosition;
+            pedinaPool[i].transform.GetChild(0).GetComponent<Renderer>().material = (isWhite) ? pedinaBianca : pedinaNera;
+            pedinaPool[i].transform.GetChild(1).GetComponent<Renderer>().material = (isWhite) ? pedinaBianca : pedinaNera;
+            pedinaPool[i].SetActive(layout[i].isActive);
+        }
+        /*
+        // Clear if not empty
+        for (int i = 0; i < pedinaPool.Length; i++)
+        {
+            Destroy(pedinaPool[i]);
         }
         // Instantiate
         for (int i = 0; i < 24; i++)
@@ -66,6 +136,7 @@ public class GameManager : MonoBehaviour
             pedinaPool[i].transform.GetChild(1).GetComponent<Renderer>().material = (rowNumber < 3) ? pedinaBianca : pedinaNera;
             pedinaPool[i].SetActive(true);
         }
+        */
     }
 
     // Start is called before the first frame update
