@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct BoardCell
+public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<BoardCell>
 {
+    // Internal Data
     private int _column;
     private static string[] _columnValues = new string[8] {"A", "B", "C", "D", "E", "F", "G", "H"};
     private int _row;
@@ -11,12 +13,14 @@ public struct BoardCell
 
     private static float centerCorrection = 0.9990662932f;
     private static float lengthCorrection = 1.0209039548f;
+    /* ********** */
 
+    // External Data
     public string cell
     {
         get
         {
-            if (_column < 0 || _column > 7 || _row < 0 || _row > 7)
+            if (!isValid)
             {
                 return null;
             }
@@ -26,26 +30,35 @@ public struct BoardCell
             }
         }
     }
-    public bool isActive
+    public (int, int) indices
     {
         get
         {
-            return cell != null;
+            return (_column, _row);
         }
-        // Isn't this potentially dangerous? A deactivate method would be better...
+    }
+    public bool isValid
+    {
+        get
+        {
+            return !(_column < 0 || _column > 7 || _row < 0 || _row > 7);
+        }
         set
         {
-            if (value && (_row < 0 && _column < 0)) {
-                _row = _row * -1;
-                _column = _column * -1;
-            }
-            else if (!value && (_row > 0 && _column > 0))
+            if (!value)
             {
-                _row = _row * -1;
-                _column = _column * -1;
+                _column = -1;
+                _row = -1;
+            }
+            else
+            {
+                Debug.Log("An invalid cell cannot be brought back to validity");
             }
         }
     }
+    /* ********** */
+
+    // Helper conversions for Scene Instantiation
     public Vector3 localPosition
     {
         get
@@ -59,15 +72,123 @@ public struct BoardCell
             return new Vector3(startingX, 0.0f, startingZ);
         }
     }
-
-    public Vector3 toGlobalPosition(Transform parent)
+    public Vector3 ToGlobalPosition(Transform parent)
     {
         Vector3 local = localPosition;
         return new Vector3(local.x + parent.position.x, parent.position.y, local.z + parent.position.z);
     }
+    /* ********** */
 
+    // Gameplay-related methods
+    public PlayerColor GetOwner(BoardCell[] layout)
+    {
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if (layout[i] == this)
+            {
+                return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
+            }
+        }
+        return (PlayerColor) (-1);
+    }
+    public bool IsSibling(BoardCell[] layout, BoardCell sibling)
+    {
+        return sibling.GetOwner(layout) == this.GetOwner(layout);
+    }
+    public BoardCell[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireEating = false)
+    {
+        if (!isValid) return new BoardCell[0];
+        BoardCell[] result = new BoardCell[0];
+        bool mustEat = requireEating;
+        BoardCell[] searchScope = bidirectional
+            ? new BoardCell[] { NE, NW, SE, SW }
+            : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } :  new BoardCell[] { SE, SW };
+        for (int i = 0; i < searchScope.Length; i++)
+        {
+            // Check if cell is inside the board
+            if (!searchScope[i].isValid) break;
+            // Check if cell is not occupied and the player doesn't have to eat
+            if (searchScope[i].CheckAvailability(layout) && !mustEat) 
+            {
+                Array.Resize(ref result, result.Length + 1);
+                result[result.Length - 1] = searchScope[i];
+                break;
+            }
+            // Check if the cell is occupied... and NOT YOURS...
+            if (!searchScope[i].CheckAvailability(layout) && !IsSibling(layout, searchScope[i]))
+            {
+                // ...if so check if the one after that...
+                (int rowDirection, int columnDirection) = (searchScope[i].indices.Item1 - indices.Item1, searchScope[i].indices.Item2 - indices.Item2);
+                BoardCell nextCell = new BoardCell(searchScope[i].indices.Item1 + rowDirection, searchScope[i].indices.Item2 + columnDirection);
+                // ...is inside the board...
+                if (!nextCell.isValid) break;
+                // ...and not occupied
+                if (nextCell.CheckAvailability(layout))
+                {
+                    if (!mustEat)
+                    {
+                        result = new BoardCell[0];
+                        mustEat = true;
+                    }
+                    Array.Resize(ref result, result.Length + 1);
+                    result[result.Length - 1] = nextCell;
+                }
+            }
+        }
+        return result;
+    }
+    public bool Move(BoardCell[] layout, BoardCell destination)
+    {
+        if (destination.isValid) return false;
+        if (!destination.CheckAvailability(layout)) return false;
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if (layout[i] == this)
+            {
+                layout[i] = destination;
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool CheckAvailability(BoardCell[] layout)
+    {
+        BoardCell thisOne = this;
+        return !Array.Exists(layout, element => element == thisOne);
+    }
+    public bool playable
+    {
+        get
+        {
+            BoardCell thisOne = this;
+            return Array.Exists(BoardCell.validCells, element => element == thisOne);   
+        }
+    }
+    public BoardCell NE { get => new BoardCell(_column + 1, _row + 1); }
+    public BoardCell NW { get => new BoardCell(_column - 1, _row + 1); }
+    public BoardCell SE { get => new BoardCell(_column + 1, _row - 1); }
+    public BoardCell SW { get => new BoardCell(_column - 1, _row - 1); }
+    /* ********** */
+
+    // Standard methods override
     public override string ToString() => cell;
+    public override bool Equals(object obj) => obj is BoardCell other && this.Equals(other);
+    public bool Equals(BoardCell other) => cell == other.cell;
+    public override int GetHashCode() => (_column, _row).GetHashCode();
+    public static bool operator ==(BoardCell lhs, BoardCell rhs) => lhs.Equals(rhs);
+    public static bool operator !=(BoardCell lhs, BoardCell rhs) => !(lhs == rhs);
+    public int CompareTo(BoardCell other)
+    {
+        if (this.Equals(other)) return 0;
+        if ((indices.Item2 > other.indices.Item2) || ((indices.Item2 == other.indices.Item2) && (indices.Item1 > other.indices.Item1)))
+            return 1;
+        return -1;
+    }
+    public static bool operator <=(BoardCell lhs, BoardCell rhs) => lhs.CompareTo(rhs) <= 0;
+    public static bool operator >=(BoardCell lhs, BoardCell rhs) => lhs.CompareTo(rhs) >= 0;
+    /* ********** */
 
+    // Constructors
     public BoardCell(Vector3 relativePosition) {
         // Adjust relativePosition to account for human error in the texture
         float rootOffset = localCenterOffset.x;
@@ -97,6 +218,9 @@ public struct BoardCell
         _row = y;
         return;
     }
+    /* ********** */
+
+    // Common values
     public static BoardCell[] validCells
     {
         get
@@ -112,6 +236,13 @@ public struct BoardCell
                 }
             }
             return result;
+        }
+    }
+    public static BoardCell invalidCell
+    {
+        get
+        {
+            return new BoardCell(-1, -1);
         }
     }
     public static BoardCell[] defaultLayout
@@ -136,5 +267,34 @@ public struct BoardCell
             float rootOffset = (0.272f / 2) * (1.0f - centerCorrection);
             return new Vector3(rootOffset, 0.0f, -rootOffset);
         }
+    }
+    /* ********** */
+}
+
+public static class BoardCellExtensionMethods
+{
+    public static BoardCell[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireEating = false)
+    {
+        return source.AvailableDestinations(layout, bidirectional, requireEating);
+    }
+    public static bool Move(this BoardCell[] layout, BoardCell source, BoardCell destination)
+    {
+        return source.Move(layout, destination);
+    }
+    public static bool CheckCellValidity(this BoardCell[] layout, BoardCell tester)
+    {
+        return tester.isValid && tester.playable && tester.CheckAvailability(layout);
+    }
+    public static PlayerColor GetOwnerOf(this BoardCell[] layout, BoardCell cell)
+    {
+        return cell.GetOwner(layout);
+    }
+    public static bool Siblings(this BoardCell[] layout, BoardCell siblingOne, BoardCell siblingTwo)
+    {
+        return siblingOne.GetOwner(layout) == siblingTwo.GetOwner(layout);
+    }
+    public static bool Contains(this BoardCell[] layout, BoardCell cell)
+    {
+        return Array.Exists(layout, element => element == cell);
     }
 }

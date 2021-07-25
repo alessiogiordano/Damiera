@@ -10,8 +10,10 @@ public class CameraManager : MonoBehaviour
     [SerializeField] private Direction direction = Direction.Neutral;
     [SerializeField] private float speed = 100.0f;
 
+    [SerializeField] private float defaultAngle = -45.0f;
+
     // Coroutines
-    IEnumerator rotate() {
+    IEnumerator Rotate() {
         while(true) {
             if (direction != Direction.Neutral) {
                 if (speed == 0.0) {
@@ -64,13 +66,14 @@ public class CameraManager : MonoBehaviour
         {
             GameObject.Destroy(this.gameObject);
         }
+        viewport.transform.rotation = Quaternion.Euler(new Vector3(defaultAngle, 0.0f, 0.0f));
     }
     // Handle Input
     public void OnInputDown(Direction dir) {
         if (direction == dir) return;
         if (direction == Direction.Neutral) {
             direction = dir;
-            StartCoroutine("rotate");
+            StartCoroutine("Rotate");
         } else {
             direction = dir;
         }
@@ -78,80 +81,7 @@ public class CameraManager : MonoBehaviour
     public void OnInputUp(Direction dir) {
         if (direction == dir) {
             direction = Direction.Neutral;
-            StopCoroutine("rotate");
+            StopCoroutine("Rotate");
         }
     }
-    /*
-    void Update()
-    {
-        // LeftArrow
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            if (direction == Direction.Neutral) {
-                direction = Direction.Left;
-                StartCoroutine("rotate");
-            } else {
-                direction = Direction.Left;
-            }
-        }
-        if (Input.GetKeyUp(KeyCode.LeftArrow))
-        {
-            if (direction == Direction.Left) {
-                direction = Direction.Neutral;
-                StopCoroutine("rotate");
-            }
-        }
-        // RightArrow
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            if (direction == Direction.Neutral) {
-                direction = Direction.Right;
-                StartCoroutine("rotate");
-            } else {
-                direction = Direction.Right;
-            }
-        }
-        if (Input.GetKeyUp(KeyCode.RightArrow))
-        {
-            if (direction == Direction.Right) {
-                direction = Direction.Neutral;
-                StopCoroutine("rotate");
-            }
-        }
-        // UpArrow
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-        {
-            if (direction == Direction.Neutral) {
-                direction = Direction.Top;
-                StartCoroutine("rotate");
-            } else {
-                direction = Direction.Top;
-            }
-        }
-        if (Input.GetKeyUp(KeyCode.UpArrow))
-        {
-            if (direction == Direction.Top) {
-                direction = Direction.Neutral;
-                StopCoroutine("rotate");
-            }
-        }
-        // DownArrow
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            if (direction == Direction.Neutral) {
-                direction = Direction.Bottom;
-                StartCoroutine("rotate");
-            } else {
-                direction = Direction.Bottom;
-            }
-        }
-        if (Input.GetKeyUp(KeyCode.DownArrow))
-        {
-            if (direction == Direction.Bottom) {
-                direction = Direction.Neutral;
-                StopCoroutine("rotate");
-            }
-        }
-    }
-    */
 }

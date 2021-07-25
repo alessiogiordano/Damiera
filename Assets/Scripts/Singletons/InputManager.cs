@@ -60,10 +60,7 @@ public class InputManager : MonoBehaviour
                             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                             if (Physics.Raycast(ray, out hit))
                             {
-                                Vector3 relativePosition = hit.transform.InverseTransformPoint(hit.point);
-                                Debug.Log("Colpito " + new BoardCell(relativePosition).ToString());
-                            } else {
-                                Debug.Log("Niente è stato colpito");
+                                GameManager.Shared.Clicked(hit);
                             }
                         }
                     }
