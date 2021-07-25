@@ -29,7 +29,7 @@ public class InputManager : MonoBehaviour
         if(_shared==null)
         {
             _shared = this;
-            GameObject.DontDestroyOnLoad(this.gameObject);
+            GameObject.DontDestroyOnLoad(this.transform.parent.gameObject);
         }
         else
         {

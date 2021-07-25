@@ -5,7 +5,8 @@ using UnityEngine;
 public class Pedina : MonoBehaviour
 {
     private bool _isSetUp = false;
-    private PedinaAnimation _animation;
+    private PedinaAnimation _slideAnimation;
+    private float _fadeAnimation = 0.4f;
 
     public PlayerColor color;
     public bool dama
@@ -16,7 +17,7 @@ public class Pedina : MonoBehaviour
         }
         set
         {
-            this.gameObject.transform.GetChild(1).gameObject.SetActive(value);
+            if (dama != value) StartCoroutine("AnimatedToggleDama");
         }
     }
     public bool selected
@@ -38,8 +39,26 @@ public class Pedina : MonoBehaviour
         }
         set
         {
-            _animation = new PedinaAnimation(cell, value);
+            _slideAnimation = new PedinaAnimation(cell, value);
             StartCoroutine("Slide");
+        }
+    }
+    public bool eaten
+    {
+        get
+        {
+            return cell.isValid;
+        }
+        set
+        {
+            if(value)
+            {
+                StartCoroutine("AnimatedSetEaten");
+            }
+            else
+            {
+                Debug.Log("An eaten cell cannot be brought back to gameplay");
+            }
         }
     }
     public bool ToggleSelection()
@@ -62,22 +81,45 @@ public class Pedina : MonoBehaviour
 
     IEnumerator Slide()
     {
-        while (_animation.running)
+        while (_slideAnimation.running)
         {
-            this.gameObject.transform.localPosition = _animation.frame;
+            this.gameObject.transform.localPosition = _slideAnimation.frame;
             yield return null;
         }
     }
 
-    // Start is called before the first frame update
-    void Start()
+    IEnumerator AnimatedToggleDama()
     {
-        
+        float progress = 0.0f;
+        while (progress < 1f)
+        {
+            progress += Time.fixedDeltaTime / _fadeAnimation;
+            Color newColor = this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color;
+            newColor.a = (dama == true) ? (1f - progress) : progress;
+            this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color = newColor;
+            yield return null;
+        }
+        this.gameObject.transform.GetChild(1).gameObject.SetActive(!dama);
     }
-
-    // Update is called once per frame
-    void Update()
+    IEnumerator AnimatedSetEaten()
     {
-        
+        float progress = 0.0f;
+        while (progress < 1f)
+        {
+            progress += Time.deltaTime / _fadeAnimation;
+            if (progress > 1.0f) progress = 1f;
+            if (dama)
+            {
+                Color damaColor = this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color;
+                damaColor.a = 1f - progress;
+                this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color = damaColor;
+            }
+            Color pedinaColor = this.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.color;
+            pedinaColor.a = 1f - progress;
+            this.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.color = pedinaColor;
+            yield return null;
+        }
+        this.gameObject.SetActive(false);
+        this.gameObject.transform.localPosition = BoardCell.invalidCell.localPosition;
     }
 }

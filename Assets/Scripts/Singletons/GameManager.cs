@@ -4,10 +4,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    // Parameters
     [SerializeField] private GameObject gameBoard;
     [SerializeField] private GameObject pedinaPrefab;
     [SerializeField] private Material pedinaBianca;
     [SerializeField] private Material pedinaNera;
+    // Internal Structure
     private GameObject[] pedinaPool = new GameObject[25]; // Container + 24 Items
     public BoardCell[] layout
     {
@@ -27,7 +29,15 @@ public class GameManager : MonoBehaviour
         }
     }
     private bool pedinaPoolReady = false;
+    // Gameplay
     private GameObject selectedPedina;
+    private GameObject forcedSelection;
+    private PlayerColor turn;
+    private void ToggleTurn(bool turnCamera = true)
+    {
+        turn = (turn == PlayerColor.White) ? PlayerColor.Black : PlayerColor.White;
+        if (turnCamera) CameraManager.Shared.TurnCameraToDefault(180f * ((int) turn), true, 1.0f);
+    }
 
     // Singleton
     private static GameManager _shared;
@@ -49,15 +59,19 @@ public class GameManager : MonoBehaviour
         if(_shared==null)
         {
             _shared = this;
-            GameObject.DontDestroyOnLoad(this.gameObject);
+            GameObject.DontDestroyOnLoad(this.transform.parent.gameObject);
         }
         else
         {
             GameObject.Destroy(this.gameObject);
         }
-        SetupBoard(); // Debug Setup
+        NewGame();
     }
-
+    void NewGame()
+    {
+        SetupBoard();
+        turn = PlayerColor.White;
+    }
     // Game Lifecycle Methods
     void SetupBoard()
     {
@@ -101,34 +115,92 @@ public class GameManager : MonoBehaviour
                 if (selectedPedina != null)
                 {
                     // Validate Move and do something with it
-                    if (layout.AvailableDestinations(selectedPedina.GetComponent<Pedina>().cell).Contains(hit))
+                    BoardCell source = selectedPedina.GetComponent<Pedina>().cell;
+                    bool isDama = selectedPedina.GetComponent<Pedina>().dama;
+                    if (layout.AvailableDestinations(source, isDama).Contains(hit))
+                    {
+                        // Move
                         selectedPedina.GetComponent<Pedina>().cell = hit;
+                        // Check if dama
+                        if (!isDama)
+                        {
+                            isDama = (turn == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
+                            selectedPedina.GetComponent<Pedina>().dama = isDama;
+                        }
+                        // Check if eaten
+                        if(source.HasEatenMovingTo(hit))
+                        {
+                            // Disable eaten piece and refresh layout
+                            BoardCell eatenCell = source.CellBetweenDiagonal(hit);
+                            layout.DebugString();
+                            BoardCell[] newLayout = layout;
+                            for (int i = 0; i < newLayout.Length; i++)
+                            {
+                                // Refresh layout
+                                if (newLayout[i] == source)
+                                    newLayout[i] = hit;
+                                // Disable eaten piece
+                                if (newLayout[i] == eatenCell)
+                                {
+                                    pedinaPool[i].GetComponent<Pedina>().eaten = true;
+                                    newLayout[i] = BoardCell.invalidCell;
+                                }
+                            }
+                            // Check if chain eating is available
+                            newLayout.DebugString();
+                            if (hit.AvailableDestinations(newLayout, isDama, true).Length > 0)
+                                forcedSelection = selectedPedina;
+                            else
+                            {
+                                forcedSelection = null;
+                                ToggleTurn();
+                            }
+                        }
+                        else
+                        {
+                            forcedSelection = null;
+                            ToggleTurn();
+                        }
+                    }
+                    else
+                    {
+                        SoundManager.Shared.Beep();
+                    }
                     // Deselect
-                    selectedPedina.GetComponent<Pedina>().selected = false;
-                    selectedPedina = null;
+                    if (forcedSelection == null)
+                    {
+                        selectedPedina.GetComponent<Pedina>().selected = false;
+                        selectedPedina = null;
+                        forcedSelection = null;
+                    }
                 }
             }
         }
         else if(target.collider.name == "Pedina Normale" || target.collider.name == "Dama")
         {
             GameObject pedina = target.collider.transform.parent.gameObject;
-            // Validate if item can be selected
-            // Set selection
-            if (selectedPedina == null)
+            // Validate Selection
+            if (forcedSelection == null && (pedina.GetComponent<Pedina>().cell.GetOwner(layout) == turn))
             {
-                selectedPedina = pedina;
-                pedina.GetComponent<Pedina>().selected = true;
-            }
-            else if (selectedPedina == pedina)
-            {
-                selectedPedina = null;
-                pedina.GetComponent<Pedina>().selected = false;
-            }
-            else
-            {
-                selectedPedina.GetComponent<Pedina>().selected = false;
-                selectedPedina = pedina;
-                pedina.GetComponent<Pedina>().selected = true;
+                // Set selection
+                if (selectedPedina == null)
+                {
+                    selectedPedina = pedina;
+                    pedina.GetComponent<Pedina>().selected = true;
+                }
+                else if (selectedPedina == pedina)
+                {
+                    selectedPedina = null;
+                    pedina.GetComponent<Pedina>().selected = false;
+                }
+                else
+                {
+                    selectedPedina.GetComponent<Pedina>().selected = false;
+                    selectedPedina = pedina;
+                    pedina.GetComponent<Pedina>().selected = true;
+                }
+            } else {
+                SoundManager.Shared.Beep();
             }
         }
     }

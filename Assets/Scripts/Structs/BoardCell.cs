@@ -82,37 +82,51 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     // Gameplay-related methods
     public PlayerColor GetOwner(BoardCell[] layout)
     {
+        //string debugLayout = "[";
+        //Array.ForEach(layout, element => debugLayout += element.cell + ", ");
+        //debugLayout = debugLayout.Remove(debugLayout.Length -2, 2) + "]";
+        //Debug.Log("layout = " + debugLayout);
+        //Debug.Log("this = " + this.cell);
         for (int i = 0; i < layout.Length; i++)
         {
             if (layout[i] == this)
             {
+                Debug.Log("this is in layout at " + i);
                 return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
             }
         }
+        Debug.Log("this is not in layout");
         return (PlayerColor) (-1);
     }
     public bool IsSibling(BoardCell[] layout, BoardCell sibling)
     {
         return sibling.GetOwner(layout) == this.GetOwner(layout);
     }
+    public bool HasEatenMovingTo(BoardCell destination)
+    {
+        return Mathf.Abs(destination.indices.Item1 - indices.Item1) == 2;
+    }
     public BoardCell[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireEating = false)
     {
+    //Debug.Log("AvailableDestinations(" + layout + ", " + bidirectional + ", " + requireEating + ");");
         if (!isValid) return new BoardCell[0];
         BoardCell[] result = new BoardCell[0];
         bool mustEat = requireEating;
         BoardCell[] searchScope = bidirectional
             ? new BoardCell[] { NE, NW, SE, SW }
-            : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } :  new BoardCell[] { SE, SW };
+            : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } : new BoardCell[] { SE, SW };
+    //Debug.Log("GetOwner() = " + GetOwner(layout));
+    //Debug.Log("searchScope[" + searchScope.Length + "]");
         for (int i = 0; i < searchScope.Length; i++)
         {
             // Check if cell is inside the board
-            if (!searchScope[i].isValid) break;
+            if (!searchScope[i].isValid) continue;
             // Check if cell is not occupied and the player doesn't have to eat
             if (searchScope[i].CheckAvailability(layout) && !mustEat) 
             {
                 Array.Resize(ref result, result.Length + 1);
                 result[result.Length - 1] = searchScope[i];
-                break;
+                continue;
             }
             // Check if the cell is occupied... and NOT YOURS...
             if (!searchScope[i].CheckAvailability(layout) && !IsSibling(layout, searchScope[i]))
@@ -121,7 +135,7 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
                 (int rowDirection, int columnDirection) = (searchScope[i].indices.Item1 - indices.Item1, searchScope[i].indices.Item2 - indices.Item2);
                 BoardCell nextCell = new BoardCell(searchScope[i].indices.Item1 + rowDirection, searchScope[i].indices.Item2 + columnDirection);
                 // ...is inside the board...
-                if (!nextCell.isValid) break;
+                if (!nextCell.isValid) continue;
                 // ...and not occupied
                 if (nextCell.CheckAvailability(layout))
                 {
@@ -135,6 +149,10 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
                 }
             }
         }
+        Debug.Log(requireEating ? "Mangiate a Catena" : "Prima mossa");
+        Debug.Log(mustEat ? "Obbligo di Mangiata" : "Scelta Libera");
+        Array.ForEach(result, element => Debug.Log(element.cell));
+        Debug.Log("Fine");
         return result;
     }
     public bool Move(BoardCell[] layout, BoardCell destination)
@@ -168,6 +186,14 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     public BoardCell NW { get => new BoardCell(_column - 1, _row + 1); }
     public BoardCell SE { get => new BoardCell(_column + 1, _row - 1); }
     public BoardCell SW { get => new BoardCell(_column - 1, _row - 1); }
+    public BoardCell CellBetweenDiagonal(BoardCell other)
+    {
+        int offsetColumn = (other.indices.Item1 - indices.Item1) / 2;
+        int offsetRow = (other.indices.Item2 - indices.Item2) / 2;
+        if (Mathf.Abs(offsetColumn) != 1 && Mathf.Abs(offsetRow) != 1 )
+            return BoardCell.invalidCell;
+        return new BoardCell(_column + offsetColumn, _row + offsetRow);
+    }
     /* ********** */
 
     // Standard methods override
@@ -296,5 +322,12 @@ public static class BoardCellExtensionMethods
     public static bool Contains(this BoardCell[] layout, BoardCell cell)
     {
         return Array.Exists(layout, element => element == cell);
+    }
+    public static void DebugString(this BoardCell[] layout)
+    {
+        string debugLayout = "[";
+        Array.ForEach(layout, element => debugLayout += element.cell + ", ");
+        debugLayout = debugLayout.Remove(debugLayout.Length -2, 2) + "]";
+        Debug.Log("layout = " + debugLayout);
     }
 }
