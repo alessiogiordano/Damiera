@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Material pedinaNera;
     // Internal Structure
     private GameObject[] pedinaPool = new GameObject[25]; // Container + 24 Items
+    private bool pedinaPoolReady = false;
     public BoardCell[] layout
     {
         get
@@ -28,10 +29,14 @@ public class GameManager : MonoBehaviour
             SetupBoard(value);
         }
     }
-    private bool pedinaPoolReady = false;
     // Gameplay
     private GameObject selectedPedina;
     private GameObject forcedSelection;
+    private int consecutiveDamaMoves;
+    private bool endsInDraw
+    {
+        get => (consecutiveDamaMoves >= 400);
+    }
     private PlayerColor turn;
     private void ToggleTurn(bool turnCamera = true)
     {
@@ -111,69 +116,25 @@ public class GameManager : MonoBehaviour
             BoardCell hit = new BoardCell(relativePosition);
             if (hit.cell != null)
             {
-                // Do Something
-                if (selectedPedina != null)
-                {
-                    // Validate Move and do something with it
-                    BoardCell source = selectedPedina.GetComponent<Pedina>().cell;
-                    bool isDama = selectedPedina.GetComponent<Pedina>().dama;
-                    if (layout.AvailableDestinations(source, isDama).Contains(hit))
-                    {
-                        // Move
-                        selectedPedina.GetComponent<Pedina>().cell = hit;
-                        // Check if dama
-                        if (!isDama)
-                        {
-                            isDama = (turn == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
-                            selectedPedina.GetComponent<Pedina>().dama = isDama;
-                        }
-                        // Check if eaten
-                        if(source.HasEatenMovingTo(hit))
-                        {
-                            // Disable eaten piece and refresh layout
-                            BoardCell eatenCell = source.CellBetweenDiagonal(hit);
-                            layout.DebugString();
-                            BoardCell[] newLayout = layout;
-                            for (int i = 0; i < newLayout.Length; i++)
-                            {
-                                // Refresh layout
-                                if (newLayout[i] == source)
-                                    newLayout[i] = hit;
-                                // Disable eaten piece
-                                if (newLayout[i] == eatenCell)
-                                {
-                                    pedinaPool[i].GetComponent<Pedina>().eaten = true;
-                                    newLayout[i] = BoardCell.invalidCell;
-                                }
-                            }
-                            // Check if chain eating is available
-                            newLayout.DebugString();
-                            if (hit.AvailableDestinations(newLayout, isDama, true).Length > 0)
-                                forcedSelection = selectedPedina;
-                            else
-                            {
-                                forcedSelection = null;
-                                ToggleTurn();
-                            }
-                        }
-                        else
-                        {
-                            forcedSelection = null;
-                            ToggleTurn();
-                        }
-                    }
-                    else
-                    {
-                        SoundManager.Shared.Beep();
-                    }
-                    // Deselect
-                    if (forcedSelection == null)
-                    {
-                        selectedPedina.GetComponent<Pedina>().selected = false;
-                        selectedPedina = null;
+                (bool hasMoved, bool hasCaptured, bool mustChainCapture) = MoveAction(hit);
+                // React to move
+                if (!hasMoved)
+                    SoundManager.Shared.Beep();
+                else {
+                    if (mustChainCapture)
+                        forcedSelection = selectedPedina;
+                    else {
                         forcedSelection = null;
+                        ToggleTurn();
                     }
                 }
+                if (forcedSelection == null && selectedPedina != null)
+                {
+                    selectedPedina.GetComponent<Pedina>().selected = false;
+                    selectedPedina = null;
+                    forcedSelection = null;
+                }
+
             }
         }
         else if(target.collider.name == "Pedina Normale" || target.collider.name == "Dama")
@@ -202,6 +163,66 @@ public class GameManager : MonoBehaviour
             } else {
                 SoundManager.Shared.Beep();
             }
+        }
+    }
+
+    // (hasMoved, hasCaptured, mustChainCapture)
+    public (bool, bool, bool) MoveAction(BoardCell hit)
+    {
+        if (selectedPedina != null)
+        {
+            // Validate Move and do something with it
+            BoardCell source = selectedPedina.GetComponent<Pedina>().cell;
+            bool isDama = selectedPedina.GetComponent<Pedina>().dama;
+            if (layout.AvailableDestinations(source, isDama).Contains(hit))
+            {
+                // Move
+                selectedPedina.GetComponent<Pedina>().cell = hit;
+                // Check if dama
+                if (!isDama)
+                {
+                    isDama = (turn == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
+                    selectedPedina.GetComponent<Pedina>().dama = isDama;
+                }
+                // Check if eaten
+                if(source.HasEatenMovingTo(hit))
+                {
+                    // Disable eaten piece and refresh layout
+                    BoardCell eatenCell = source.CellBetweenDiagonal(hit);
+                    BoardCell[] newLayout = layout;
+                    for (int i = 0; i < newLayout.Length; i++)
+                    {
+                        // Refresh layout
+                        if (newLayout[i] == source)
+                            newLayout[i] = hit;
+                        // Disable eaten piece
+                        if (newLayout[i] == eatenCell)
+                        {
+                            pedinaPool[i].GetComponent<Pedina>().eaten = true;
+                            newLayout[i] = BoardCell.invalidCell;
+                        }
+                    }
+                    // Check if chain eating is available
+                    if (hit.AvailableDestinations(newLayout, isDama, true).Length > 0)
+                        return (true, true, true);
+                    else
+                    {
+                        return (true, true, false);
+                    }
+                }
+                else
+                {
+                    return (true, false, false);
+                }
+            }
+            else
+            {
+                return (false, false, false);
+            }
+        }
+        else
+        {
+            return (false, false, false);
         }
     }
 }
