@@ -43,7 +43,7 @@ public class Pedina : MonoBehaviour
             StartCoroutine("Slide");
         }
     }
-    public bool eaten
+    public bool captured
     {
         get
         {
@@ -53,11 +53,11 @@ public class Pedina : MonoBehaviour
         {
             if(value)
             {
-                StartCoroutine("AnimatedSetEaten");
+                StartCoroutine("AnimatedSetCaptured");
             }
             else
             {
-                Debug.Log("An eaten cell cannot be brought back to gameplay");
+                Debug.Log("A captured cell cannot be brought back to gameplay");
             }
         }
     }
@@ -101,7 +101,7 @@ public class Pedina : MonoBehaviour
         }
         this.gameObject.transform.GetChild(1).gameObject.SetActive(!dama);
     }
-    IEnumerator AnimatedSetEaten()
+    IEnumerator AnimatedSetCaptured()
     {
         float progress = 0.0f;
         while (progress < 1f)

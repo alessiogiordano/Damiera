@@ -184,25 +184,25 @@ public class GameManager : MonoBehaviour
                     isDama = (turn == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
                     selectedPedina.GetComponent<Pedina>().dama = isDama;
                 }
-                // Check if eaten
-                if(source.HasEatenMovingTo(hit))
+                // Check if captured
+                if(source.HasCapturedMovingTo(hit))
                 {
-                    // Disable eaten piece and refresh layout
-                    BoardCell eatenCell = source.CellBetweenDiagonal(hit);
+                    // Disable captured piece and refresh layout
+                    BoardCell capturedCell = source.CellBetweenDiagonal(hit);
                     BoardCell[] newLayout = layout;
                     for (int i = 0; i < newLayout.Length; i++)
                     {
                         // Refresh layout
                         if (newLayout[i] == source)
                             newLayout[i] = hit;
-                        // Disable eaten piece
-                        if (newLayout[i] == eatenCell)
+                        // Disable captured piece
+                        if (newLayout[i] == capturedCell)
                         {
-                            pedinaPool[i].GetComponent<Pedina>().eaten = true;
+                            pedinaPool[i].GetComponent<Pedina>().captured = true;
                             newLayout[i] = BoardCell.invalidCell;
                         }
                     }
-                    // Check if chain eating is available
+                    // Check if chain capturing is available
                     if (hit.AvailableDestinations(newLayout, isDama, true).Length > 0)
                         return (true, true, true);
                     else

@@ -102,16 +102,16 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     {
         return sibling.GetOwner(layout) == this.GetOwner(layout);
     }
-    public bool HasEatenMovingTo(BoardCell destination)
+    public bool HasCapturedMovingTo(BoardCell destination)
     {
         return Mathf.Abs(destination.indices.Item1 - indices.Item1) == 2;
     }
-    public BoardCell[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireEating = false)
+    public BoardCell[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireCapturing = false)
     {
-    //Debug.Log("AvailableDestinations(" + layout + ", " + bidirectional + ", " + requireEating + ");");
+    //Debug.Log("AvailableDestinations(" + layout + ", " + bidirectional + ", " + requireCapturing + ");");
         if (!isValid) return new BoardCell[0];
         BoardCell[] result = new BoardCell[0];
-        bool mustEat = requireEating;
+        bool mustCapture = requireCapturing;
         BoardCell[] searchScope = bidirectional
             ? new BoardCell[] { NE, NW, SE, SW }
             : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } : new BoardCell[] { SE, SW };
@@ -121,8 +121,8 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
         {
             // Check if cell is inside the board
             if (!searchScope[i].isValid) continue;
-            // Check if cell is not occupied and the player doesn't have to eat
-            if (searchScope[i].CheckAvailability(layout) && !mustEat) 
+            // Check if cell is not occupied and the player doesn't have to capture
+            if (searchScope[i].CheckAvailability(layout) && !mustCapture) 
             {
                 Array.Resize(ref result, result.Length + 1);
                 result[result.Length - 1] = searchScope[i];
@@ -139,18 +139,18 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
                 // ...and not occupied
                 if (nextCell.CheckAvailability(layout))
                 {
-                    if (!mustEat)
+                    if (!mustCapture)
                     {
                         result = new BoardCell[0];
-                        mustEat = true;
+                        mustCapture = true;
                     }
                     Array.Resize(ref result, result.Length + 1);
                     result[result.Length - 1] = nextCell;
                 }
             }
         }
-        Debug.Log(requireEating ? "Mangiate a Catena" : "Prima mossa");
-        Debug.Log(mustEat ? "Obbligo di Mangiata" : "Scelta Libera");
+        Debug.Log(requireCapturing ? "Mangiate a Catena" : "Prima mossa");
+        Debug.Log(mustCapture ? "Obbligo di Mangiata" : "Scelta Libera");
         Array.ForEach(result, element => Debug.Log(element.cell));
         Debug.Log("Fine");
         return result;
@@ -299,9 +299,9 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
 
 public static class BoardCellExtensionMethods
 {
-    public static BoardCell[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireEating = false)
+    public static BoardCell[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireCapturing = false)
     {
-        return source.AvailableDestinations(layout, bidirectional, requireEating);
+        return source.AvailableDestinations(layout, bidirectional, requireCapturing);
     }
     public static bool Move(this BoardCell[] layout, BoardCell source, BoardCell destination)
     {
