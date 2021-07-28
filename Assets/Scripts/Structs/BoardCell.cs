@@ -80,23 +80,35 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     /* ********** */
 
     // Gameplay-related methods
-    public PlayerColor GetOwner(BoardCell[] layout)
+    public int GetIndex(BoardCell[] layout)
     {
-        //string debugLayout = "[";
-        //Array.ForEach(layout, element => debugLayout += element.cell + ", ");
-        //debugLayout = debugLayout.Remove(debugLayout.Length -2, 2) + "]";
-        //Debug.Log("layout = " + debugLayout);
-        //Debug.Log("this = " + this.cell);
         for (int i = 0; i < layout.Length; i++)
         {
             if (layout[i] == this)
             {
-                Debug.Log("this is in layout at " + i);
+                return i;
+            }
+        }
+        return -1;
+    }
+    public PlayerColor GetOwner(BoardCell[] layout)
+    {
+        int i = GetIndex(layout);
+        Debug.Log("this is in layout at " + i);
+        if (i != -1)
+            return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
+        return (PlayerColor) (-1);
+        /*
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if (layout[i] == this)
+            {
+                //Debug.Log("this is in layout at " + i);
                 return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
             }
         }
-        Debug.Log("this is not in layout");
         return (PlayerColor) (-1);
+        */
     }
     public bool IsSibling(BoardCell[] layout, BoardCell sibling)
     {
@@ -106,31 +118,30 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     {
         return Mathf.Abs(destination.indices.Item1 - indices.Item1) == 2;
     }
-    public BoardCell[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireCapturing = false)
+    public BoardMove[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireCapturing = false, int maximumChain = 3)
     {
-    //Debug.Log("AvailableDestinations(" + layout + ", " + bidirectional + ", " + requireCapturing + ");");
-        if (!isValid) return new BoardCell[0];
-        BoardCell[] result = new BoardCell[0];
-        bool mustCapture = requireCapturing;
+        if (!isValid) return new BoardMove[0];
+        BoardMove[] result = new BoardMove[0];
         BoardCell[] searchScope = bidirectional
             ? new BoardCell[] { NE, NW, SE, SW }
             : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } : new BoardCell[] { SE, SW };
-    //Debug.Log("GetOwner() = " + GetOwner(layout));
-    //Debug.Log("searchScope[" + searchScope.Length + "]");
         for (int i = 0; i < searchScope.Length; i++)
         {
             // Check if cell is inside the board
             if (!searchScope[i].isValid) continue;
             // Check if cell is not occupied and the player doesn't have to capture
-            if (searchScope[i].CheckAvailability(layout) && !mustCapture) 
+            if (searchScope[i].CheckAvailability(layout) && !requireCapturing) 
             {
                 Array.Resize(ref result, result.Length + 1);
-                result[result.Length - 1] = searchScope[i];
+                result[result.Length - 1] = new BoardMove(this, searchScope[i]);
                 continue;
             }
             // Check if the cell is occupied... and NOT YOURS...
             if (!searchScope[i].CheckAvailability(layout) && !IsSibling(layout, searchScope[i]))
             {
+                // ... and if it is dama and you are not...
+                bool captureIsDama = GameManager.Shared.GetInstanceFromIndex(searchScope[i].GetIndex(layout)).GetComponent<Pedina>().dama;
+                if (captureIsDama && !bidirectional) continue;
                 // ...if so check if the one after that...
                 (int rowDirection, int columnDirection) = (searchScope[i].indices.Item1 - indices.Item1, searchScope[i].indices.Item2 - indices.Item2);
                 BoardCell nextCell = new BoardCell(searchScope[i].indices.Item1 + rowDirection, searchScope[i].indices.Item2 + columnDirection);
@@ -139,22 +150,34 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
                 // ...and not occupied
                 if (nextCell.CheckAvailability(layout))
                 {
-                    if (!mustCapture)
+                    BoardMove[] chainedMoves = new BoardMove[0];
+                    if (maximumChain > 1)
                     {
-                        result = new BoardCell[0];
-                        mustCapture = true;
+                        BoardCell[] alteredLayout = new BoardMove(this, nextCell, searchScope[i]).ApplyTo(layout).Item1;
+                        bool becameDama = (GetOwner(layout) == PlayerColor.White) ? nextCell.indices.Item2 == 7 : nextCell.indices.Item2 == 0;
+                        chainedMoves = nextCell.AvailableDestinations(alteredLayout, bidirectional || becameDama, true, (bidirectional || becameDama) ? 12 : maximumChain - 1);
                     }
-                    Array.Resize(ref result, result.Length + 1);
-                    result[result.Length - 1] = nextCell;
+                    if (chainedMoves.Length > 0)
+                    {
+                        BoardCell sourceCell = this;
+                        Array.ForEach(chainedMoves, chain => {
+                            Array.Resize(ref result, result.Length + 1);
+                            result[result.Length - 1] = new BoardMove(sourceCell, nextCell, searchScope[i], chain, (captureIsDama) ? 3 : 1);
+                        });
+                    }
+                    else
+                    {
+                        // Assign
+                        Array.Resize(ref result, result.Length + 1);
+                        result[result.Length - 1] = new BoardMove(this, nextCell, searchScope[i], (captureIsDama) ? 3 : 1);
+                    }
                 }
             }
         }
-        Debug.Log(requireCapturing ? "Mangiate a Catena" : "Prima mossa");
-        Debug.Log(mustCapture ? "Obbligo di Mangiata" : "Scelta Libera");
-        Array.ForEach(result, element => Debug.Log(element.cell));
-        Debug.Log("Fine");
         return result;
     }
+    // Manipulate Array of BoardCell
+    /*
     public bool Move(BoardCell[] layout, BoardCell destination)
     {
         if (destination.isValid) return false;
@@ -164,11 +187,25 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
             if (layout[i] == this)
             {
                 layout[i] = destination;
+                Debug.Log("Moved: " + this.cell + " to " + destination.cell);
                 return true;
             }
         }
         return false;
     }
+    public bool CaptureIn(BoardCell[] layout)
+    {
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if (layout[i] == this)
+            {
+                layout[i] = BoardCell.invalidCell;
+                Debug.Log("Captured: " + this.cell);
+                return true;
+            }
+        }
+        return false;
+    }*/
     public bool CheckAvailability(BoardCell[] layout)
     {
         BoardCell thisOne = this;
@@ -299,13 +336,22 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
 
 public static class BoardCellExtensionMethods
 {
-    public static BoardCell[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireCapturing = false)
+    public static BoardMove[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireCapturing = false, int maximumChain = 2)
     {
-        return source.AvailableDestinations(layout, bidirectional, requireCapturing);
+        return source.AvailableDestinations(layout, bidirectional, requireCapturing, maximumChain);
     }
+    /*
     public static bool Move(this BoardCell[] layout, BoardCell source, BoardCell destination)
     {
         return source.Move(layout, destination);
+    }
+    public static bool CaptureCell(this BoardCell[] layout, BoardCell cell)
+    {
+        return cell.CaptureIn(layout);
+    }*/
+    public static (BoardCell[], bool, bool) UpdateWith(this BoardCell[] layout, BoardMove move)
+    {
+        return move.ApplyTo(layout);
     }
     public static bool CheckCellValidity(this BoardCell[] layout, BoardCell tester)
     {

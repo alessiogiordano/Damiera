@@ -29,20 +29,24 @@ public class GameManager : MonoBehaviour
             SetupBoard(value);
         }
     }
+    public GameObject GetInstanceFromCell(BoardCell cell)
+    {
+        if (!pedinaPoolReady) return null;
+        for (int i = 0; i < 24; i++)
+            if (pedinaPool[i].GetComponent<Pedina>().cell == cell) return pedinaPool[i];
+        return null;
+    }
+    public GameObject GetInstanceFromIndex(int index)
+    {
+        if (pedinaPoolReady && index >= 0 && index < pedinaPool.Length)
+            return pedinaPool[index];
+        return null;
+    }
     // Gameplay
     private GameObject selectedPedina;
     private GameObject forcedSelection;
-    private int consecutiveDamaMoves;
-    private bool endsInDraw
-    {
-        get => (consecutiveDamaMoves >= 400);
-    }
-    private PlayerColor turn;
-    private void ToggleTurn(bool turnCamera = true)
-    {
-        turn = (turn == PlayerColor.White) ? PlayerColor.Black : PlayerColor.White;
-        if (turnCamera) CameraManager.Shared.TurnCameraToDefault(180f * ((int) turn), true, 1.0f);
-    }
+    private BoardTurn turn;
+    private PlayerColor conclusion;
 
     // Singleton
     private static GameManager _shared;
@@ -75,7 +79,16 @@ public class GameManager : MonoBehaviour
     void NewGame()
     {
         SetupBoard();
-        turn = PlayerColor.White;
+        selectedPedina = null;
+        forcedSelection = null;
+        /*
+        SetupBoard(new BoardCell[24] {
+            new BoardCell(0,0), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell,
+            new BoardCell(7,7), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell
+        });
+        */
+        turn = new BoardTurn(PlayerColor.White, layout);
+        conclusion = (PlayerColor) (-1);
     }
     // Game Lifecycle Methods
     void SetupBoard()
@@ -110,6 +123,11 @@ public class GameManager : MonoBehaviour
 
     public void Clicked(RaycastHit target)
     {
+        if (conclusion != (PlayerColor)(-1))
+        {
+            SoundManager.Shared.Beep();
+            return;
+        }
         if (target.collider.name == "Tavolo da Gioco")
         {
             Vector3 relativePosition = target.transform.InverseTransformPoint(target.point);
@@ -125,7 +143,13 @@ public class GameManager : MonoBehaviour
                         forcedSelection = selectedPedina;
                     else {
                         forcedSelection = null;
-                        ToggleTurn();
+                        turn = turn.NextTurn();
+                        conclusion = turn.CheckConclusion();
+                        if (conclusion != (PlayerColor)(-1))
+                        {
+                            // Game Over
+                            Debug.Log("Game Over - " + conclusion + " Wins");
+                        }
                     }
                 }
                 if (forcedSelection == null && selectedPedina != null)
@@ -141,7 +165,7 @@ public class GameManager : MonoBehaviour
         {
             GameObject pedina = target.collider.transform.parent.gameObject;
             // Validate Selection
-            if (forcedSelection == null && (pedina.GetComponent<Pedina>().cell.GetOwner(layout) == turn))
+            if (forcedSelection == null && (pedina.GetComponent<Pedina>().cell.GetOwner(layout) == turn.color))
             {
                 // Set selection
                 if (selectedPedina == null)
@@ -174,36 +198,25 @@ public class GameManager : MonoBehaviour
             // Validate Move and do something with it
             BoardCell source = selectedPedina.GetComponent<Pedina>().cell;
             bool isDama = selectedPedina.GetComponent<Pedina>().dama;
-            if (layout.AvailableDestinations(source, isDama).Contains(hit))
+            //if (layout.AvailableDestinations(source, isDama).Contains(hit))
+            int moveIndex = turn.Check(source, hit);
+            if (moveIndex != -1)
             {
+                BoardMove move = turn.moves[moveIndex];
+                (bool turnNotOver, bool hasMoved, bool hasCaptured) = turn.Procede(move);
                 // Move
                 selectedPedina.GetComponent<Pedina>().cell = hit;
                 // Check if dama
                 if (!isDama)
                 {
-                    isDama = (turn == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
+                    isDama = (turn.color == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
                     selectedPedina.GetComponent<Pedina>().dama = isDama;
                 }
                 // Check if captured
-                if(source.HasCapturedMovingTo(hit))
+                if(hasCaptured)
                 {
-                    // Disable captured piece and refresh layout
-                    BoardCell capturedCell = source.CellBetweenDiagonal(hit);
-                    BoardCell[] newLayout = layout;
-                    for (int i = 0; i < newLayout.Length; i++)
-                    {
-                        // Refresh layout
-                        if (newLayout[i] == source)
-                            newLayout[i] = hit;
-                        // Disable captured piece
-                        if (newLayout[i] == capturedCell)
-                        {
-                            pedinaPool[i].GetComponent<Pedina>().captured = true;
-                            newLayout[i] = BoardCell.invalidCell;
-                        }
-                    }
-                    // Check if chain capturing is available
-                    if (hit.AvailableDestinations(newLayout, isDama, true).Length > 0)
+                    GetInstanceFromCell(move.capture).GetComponent<Pedina>().captured = true;
+                    if (turnNotOver)
                         return (true, true, true);
                     else
                     {

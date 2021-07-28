@@ -76,6 +76,9 @@ public class Pedina : MonoBehaviour
         this.gameObject.transform.localPosition = cell.localPosition;
         this.gameObject.transform.GetChild(0).GetComponent<Renderer>().material = (isWhite) ? whiteMaterial : blackMaterial;
         this.gameObject.transform.GetChild(1).GetComponent<Renderer>().material = (isWhite) ? whiteMaterial : blackMaterial;
+        Color hiddenColor = this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color;
+        hiddenColor.a = 0f;
+        this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color = hiddenColor;
         this.gameObject.SetActive(cell.isValid);
     }
 
@@ -91,15 +94,17 @@ public class Pedina : MonoBehaviour
     IEnumerator AnimatedToggleDama()
     {
         float progress = 0.0f;
+        bool isDama = dama;
+        if (!isDama) this.gameObject.transform.GetChild(1).gameObject.SetActive(true);
         while (progress < 1f)
         {
             progress += Time.fixedDeltaTime / _fadeAnimation;
             Color newColor = this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color;
-            newColor.a = (dama == true) ? (1f - progress) : progress;
+            newColor.a = (isDama == true) ? (1f - progress) : progress;
             this.gameObject.transform.GetChild(1).gameObject.GetComponent<Renderer>().material.color = newColor;
             yield return null;
         }
-        this.gameObject.transform.GetChild(1).gameObject.SetActive(!dama);
+        if (isDama) this.gameObject.transform.GetChild(1).gameObject.SetActive(false);
     }
     IEnumerator AnimatedSetCaptured()
     {
