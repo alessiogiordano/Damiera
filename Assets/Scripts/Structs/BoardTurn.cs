@@ -5,25 +5,31 @@ using UnityEngine;
 
 public struct BoardTurn
 {
-    public PlayerColor color { get; }
+    public Player currentPlayer { get; }
+
+    public Player adversaryPlayer { get; }
     private BoardMove[] _moves;
     public BoardMove[] moves { get => _moves; }
     private BoardCell[] _layout;
     public BoardCell[] layout { get => _layout; }
+    private bool[] _damaLayout;
+    public bool[] damaLayout { get => _damaLayout; }
     public bool completed { get => _moves.Length == 0; }
 
-    public BoardTurn(PlayerColor color, BoardCell[] layout)
+    public BoardTurn(Player currentPlayer, Player adversaryPlayer, BoardCell[] layout, bool[] damaLayout)
     {
-        this.color = color;
+        this.currentPlayer = currentPlayer;
+        this.adversaryPlayer = adversaryPlayer;
         this._layout = layout;
+        this._damaLayout = damaLayout;
         this._layout.DebugString();
         // Construct Array
         BoardMove[] result = new BoardMove[0];
         int layoutSubsetLength = layout.Length / 2;
-        int layoutSubsetOffset = (color == PlayerColor.White) ? 0 : layoutSubsetLength;
+        int layoutSubsetOffset = (currentPlayer.color == PlayerColor.White) ? 0 : layoutSubsetLength;
         for (int i = 0; i < layoutSubsetLength; i++)
         {
-            BoardMove[] partialResult = layout[i + layoutSubsetOffset].AvailableDestinations(layout, GameManager.Shared.GetInstanceFromIndex(i + layoutSubsetOffset).GetComponent<Pedina>().dama);
+            BoardMove[] partialResult = layout[i + layoutSubsetOffset].AvailableDestinations(layout, damaLayout);
             int partialResultLength = partialResult.Length;
             if (partialResultLength > 0)
             {
@@ -64,7 +70,7 @@ public struct BoardTurn
         return -1;
     }
     // MoreMovesLeft, HasMoved, HasCaptured
-    public (bool, bool, bool) Procede(BoardMove move)
+    public (bool, bool, bool, bool) Procede(BoardMove move)
     {
         // Update Moves Array
         BoardMove[] newMoveSet = new BoardMove[0];
@@ -80,23 +86,24 @@ public struct BoardTurn
         this._moves.DebugString();
         // Update Layout
         bool turnNotOver = newMoveSet.Length > 0;
-        (BoardCell[] newLayout, bool hasMoved, bool hasCaptured) = _layout.UpdateWith(move);
+        (BoardCell[] newLayout, bool[] newDamaLayout, bool hasMoved, bool hasCaptured, bool hasGraduated) = move.ApplyTo(_layout, _damaLayout);
         this._layout = newLayout;
-        return (turnNotOver, hasMoved, hasCaptured);
+        this._damaLayout = newDamaLayout;
+        return (turnNotOver, hasMoved, hasCaptured, hasGraduated);
     }
 
-    public BoardTurn NextTurn(bool turnCamera = true)
+    public (BoardTurn, Player) NextTurn(bool turnCamera = true)
     {
-        PlayerColor nextColor = (color == PlayerColor.White) ? PlayerColor.Black : PlayerColor.White;
-        if (turnCamera) CameraManager.Shared.TurnCameraToDefault(180f * ((int) nextColor), true, 1.0f);
-        _layout.DebugString();
-        return new BoardTurn(nextColor, _layout);
+        BoardTurn nextTurn = new BoardTurn(adversaryPlayer, currentPlayer, _layout, _damaLayout);
+        Player winner = nextTurn.CheckConclusion();
+        if (turnCamera && (winner == null)) CameraManager.Shared.TurnCameraToDefault(180f * ((int) nextTurn.currentPlayer.color), true, 1.0f);
+        return (nextTurn, winner);
     }
 
-    public PlayerColor CheckConclusion()
+    public Player CheckConclusion()
     {
         // Check if enemy has pieces
-        int enemyOffset = (color == PlayerColor.White) ? 12 : 0;
+        int enemyOffset = (adversaryPlayer.color == PlayerColor.White) ? 0 : 12;
         bool enemyHasPieces = false;
         for (int i = 0 + enemyOffset; i < 12 + enemyOffset; i++)
         {
@@ -106,8 +113,8 @@ public struct BoardTurn
                 break;
             }
         }
-        if (!enemyHasPieces) return color; // You Won
-        if (_moves.Length == 0) return (color == PlayerColor.White) ? PlayerColor.Black : PlayerColor.White; // You Lost
-        return (PlayerColor) (-1); // Keep Going
+        if (!enemyHasPieces) return currentPlayer; // You Won
+        if (_moves.Length == 0) return adversaryPlayer; // You Lost
+        return null; // Keep Going
     }
 }

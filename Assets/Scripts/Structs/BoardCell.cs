@@ -118,10 +118,11 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     {
         return Mathf.Abs(destination.indices.Item1 - indices.Item1) == 2;
     }
-    public BoardMove[] AvailableDestinations(BoardCell[] layout, bool bidirectional = false, bool requireCapturing = false, int maximumChain = 3)
+    public BoardMove[] AvailableDestinations(BoardCell[] layout, bool[] damaLayout, bool requireCapturing = false, int maximumChain = 3)
     {
         if (!isValid) return new BoardMove[0];
         BoardMove[] result = new BoardMove[0];
+        bool bidirectional = damaLayout[GetIndex(layout)];
         BoardCell[] searchScope = bidirectional
             ? new BoardCell[] { NE, NW, SE, SW }
             : GetOwner(layout) == PlayerColor.White ? new BoardCell[] { NE, NW } : new BoardCell[] { SE, SW };
@@ -140,7 +141,7 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
             if (!searchScope[i].CheckAvailability(layout) && !IsSibling(layout, searchScope[i]))
             {
                 // ... and if it is dama and you are not...
-                bool captureIsDama = GameManager.Shared.GetInstanceFromIndex(searchScope[i].GetIndex(layout)).GetComponent<Pedina>().dama;
+                bool captureIsDama = damaLayout[searchScope[i].GetIndex(layout)];
                 if (captureIsDama && !bidirectional) continue;
                 // ...if so check if the one after that...
                 (int rowDirection, int columnDirection) = (searchScope[i].indices.Item1 - indices.Item1, searchScope[i].indices.Item2 - indices.Item2);
@@ -151,11 +152,12 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
                 if (nextCell.CheckAvailability(layout))
                 {
                     BoardMove[] chainedMoves = new BoardMove[0];
-                    if (maximumChain > 1)
+                    if (maximumChain > 1 || bidirectional)
                     {
-                        BoardCell[] alteredLayout = new BoardMove(this, nextCell, searchScope[i]).ApplyTo(layout).Item1;
-                        bool becameDama = (GetOwner(layout) == PlayerColor.White) ? nextCell.indices.Item2 == 7 : nextCell.indices.Item2 == 0;
-                        chainedMoves = nextCell.AvailableDestinations(alteredLayout, bidirectional || becameDama, true, (bidirectional || becameDama) ? 12 : maximumChain - 1);
+                        var applyChanges = new BoardMove(this, nextCell, searchScope[i]).ApplyTo(layout, damaLayout);
+                        BoardCell[] alteredLayout = applyChanges.Item1;
+                        bool[] alteredDamaLayout = applyChanges.Item2;
+                        chainedMoves = nextCell.AvailableDestinations(alteredLayout, alteredDamaLayout, true, maximumChain - 1);
                     }
                     if (chainedMoves.Length > 0)
                     {
@@ -336,35 +338,6 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
 
 public static class BoardCellExtensionMethods
 {
-    public static BoardMove[] AvailableDestinations(this BoardCell[] layout, BoardCell source, bool bidirectional = false, bool requireCapturing = false, int maximumChain = 2)
-    {
-        return source.AvailableDestinations(layout, bidirectional, requireCapturing, maximumChain);
-    }
-    /*
-    public static bool Move(this BoardCell[] layout, BoardCell source, BoardCell destination)
-    {
-        return source.Move(layout, destination);
-    }
-    public static bool CaptureCell(this BoardCell[] layout, BoardCell cell)
-    {
-        return cell.CaptureIn(layout);
-    }*/
-    public static (BoardCell[], bool, bool) UpdateWith(this BoardCell[] layout, BoardMove move)
-    {
-        return move.ApplyTo(layout);
-    }
-    public static bool CheckCellValidity(this BoardCell[] layout, BoardCell tester)
-    {
-        return tester.isValid && tester.playable && tester.CheckAvailability(layout);
-    }
-    public static PlayerColor GetOwnerOf(this BoardCell[] layout, BoardCell cell)
-    {
-        return cell.GetOwner(layout);
-    }
-    public static bool Siblings(this BoardCell[] layout, BoardCell siblingOne, BoardCell siblingTwo)
-    {
-        return siblingOne.GetOwner(layout) == siblingTwo.GetOwner(layout);
-    }
     public static bool Contains(this BoardCell[] layout, BoardCell cell)
     {
         return Array.Exists(layout, element => element == cell);

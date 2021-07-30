@@ -50,9 +50,16 @@ public class BoardMove
     }
     public (BoardCell[], bool, bool) ApplyTo(BoardCell[] layout)
     {
+        var fullApplyResult = ApplyTo(layout, new bool[0]);
+        return (fullApplyResult.Item1, fullApplyResult.Item3, fullApplyResult.Item4);
+    }
+    public (BoardCell[], bool[], bool, bool, bool) ApplyTo(BoardCell[] layout, bool[] damaLayout)
+    {
         BoardCell[] newLayout = (BoardCell[]) layout.Clone();
+        bool[] newDamaLayout = (bool[]) damaLayout.Clone();
         bool hasMoved = false;
         bool hasCaptured = false;
+        bool hasGraduated = false;
         BoardCell capturedCell = this.capture;
         for (int i = 0; i < newLayout.Length; i++)
         {
@@ -61,16 +68,37 @@ public class BoardMove
             {
                 hasMoved = true;
                 newLayout[i] = this.destination;
+                // Refresh damaLayout
+                if (layout.Length == damaLayout.Length)
+                {
+                    bool becameDama = (this.destination.GetOwner(newLayout) == PlayerColor.White) ? this.destination.indices.Item2 == 7 : this.destination.indices.Item2 == 0;
+                    if (newDamaLayout[this.destination.GetIndex(newLayout)] != becameDama) hasGraduated = true;
+                    newDamaLayout[this.destination.GetIndex(newLayout)] = newDamaLayout[this.destination.GetIndex(newLayout)] || becameDama;
+                }
             }
             // Disable captured piece
             if (this.capture.isValid && newLayout[i] == this.capture)
             {
                 hasCaptured = true;
-                //pedinaPool[i].GetComponent<Pedina>().captured = true;
                 newLayout[i] = BoardCell.invalidCell;
             }
         }
-        return (newLayout, hasMoved, hasCaptured);
+        return (newLayout, newDamaLayout, hasMoved, hasCaptured, hasGraduated);
+    }
+
+    public static bool[] UpdateDamaLayout(BoardCell[] layout, bool[] damaLayout)
+    {
+        // (GetOwner(layout) == PlayerColor.White) ? nextCell.indices.Item2 == 7 : nextCell.indices.Item2 == 0;
+        if (layout.Length != damaLayout.Length) return damaLayout;
+        bool[] alteredDamaLayout = (bool[]) damaLayout.Clone();
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if(i < (layout.Length / 2) && layout[i].indices.Item2 == 7)
+                alteredDamaLayout[i] = true; // White Piece at top of board
+            else if(i >= (layout.Length / 2) && layout[i].indices.Item2 == 0)
+                alteredDamaLayout[i] = true; // Dark Piece at bottom of board
+        }
+        return alteredDamaLayout;
     }
 }
 

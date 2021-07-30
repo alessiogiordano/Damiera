@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Threading.Tasks;
 
 public class GameManager : MonoBehaviour
 {
@@ -27,6 +29,27 @@ public class GameManager : MonoBehaviour
         set
         {
             SetupBoard(value);
+        }
+    }
+    public bool[] damaLayout
+    {
+        get
+        {
+            if (!pedinaPoolReady) return new bool[0];
+            bool[] result = new bool[24];
+            for (int i = 0; i < 24; i++)
+            {
+                result[i] = pedinaPool[i].GetComponent<Pedina>().dama;
+            }
+            return result;
+        }
+        set
+        {
+            if (value.Length == pedinaPool.Length)
+                for (int i = 0; i < pedinaPool.Length; i++)
+                {
+                    pedinaPool[i].GetComponent<Pedina>().dama = value[i];
+                }
         }
     }
     public GameObject GetInstanceFromCell(BoardCell cell)
@@ -74,10 +97,13 @@ public class GameManager : MonoBehaviour
         {
             GameObject.Destroy(this.gameObject);
         }
-        NewGame();
+        NewGame(new HumanPlayer(PlayerColor.White, "Giocatore 1"), new ComputerPlayer(PlayerColor.Black, 2));
     }
-    void NewGame()
+    void NewGame(Player whitePlayer, Player blackPlayer)
     {
+        //Debug.Log("White Player is " + whitePlayer.GetType());
+        //Debug.Log("Black Player is " + blackPlayer.GetType());
+
         SetupBoard();
         selectedPedina = null;
         forcedSelection = null;
@@ -87,7 +113,7 @@ public class GameManager : MonoBehaviour
             new BoardCell(7,7), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell
         });
         */
-        turn = new BoardTurn(PlayerColor.White, layout);
+        turn = new BoardTurn(whitePlayer, blackPlayer, layout, damaLayout);
         conclusion = (PlayerColor) (-1);
     }
     // Game Lifecycle Methods
@@ -132,40 +158,13 @@ public class GameManager : MonoBehaviour
         {
             Vector3 relativePosition = target.transform.InverseTransformPoint(target.point);
             BoardCell hit = new BoardCell(relativePosition);
-            if (hit.cell != null)
-            {
-                (bool hasMoved, bool hasCaptured, bool mustChainCapture) = MoveAction(hit);
-                // React to move
-                if (!hasMoved)
-                    SoundManager.Shared.Beep();
-                else {
-                    if (mustChainCapture)
-                        forcedSelection = selectedPedina;
-                    else {
-                        forcedSelection = null;
-                        turn = turn.NextTurn();
-                        conclusion = turn.CheckConclusion();
-                        if (conclusion != (PlayerColor)(-1))
-                        {
-                            // Game Over
-                            Debug.Log("Game Over - " + conclusion + " Wins");
-                        }
-                    }
-                }
-                if (forcedSelection == null && selectedPedina != null)
-                {
-                    selectedPedina.GetComponent<Pedina>().selected = false;
-                    selectedPedina = null;
-                    forcedSelection = null;
-                }
-
-            }
+            RenderMove(hit);
         }
         else if(target.collider.name == "Pedina Normale" || target.collider.name == "Dama")
         {
             GameObject pedina = target.collider.transform.parent.gameObject;
             // Validate Selection
-            if (forcedSelection == null && (pedina.GetComponent<Pedina>().cell.GetOwner(layout) == turn.color))
+            if (forcedSelection == null && (pedina.GetComponent<Pedina>().cell.GetOwner(layout) == turn.currentPlayer.color))
             {
                 // Set selection
                 if (selectedPedina == null)
@@ -189,6 +188,44 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+    public void RenderMove(BoardCell selection, BoardCell hit)
+    {
+        selectedPedina = GameManager.Shared.GetInstanceFromIndex(selection.GetIndex(layout));
+        RenderMove(hit);
+    }
+    public void RenderMove(BoardCell hit)
+    {
+        if (hit.cell != null)
+        {
+            (bool hasMoved, bool hasCaptured, bool mustChainCapture) = MoveAction(hit);
+            // React to move
+            if (!hasMoved)
+                SoundManager.Shared.Beep();
+            else {
+                if (mustChainCapture)
+                    forcedSelection = selectedPedina;
+                else {
+                    forcedSelection = null;
+                    bool rotateCamera = turn.adversaryPlayer is HumanPlayer;
+                    (BoardTurn nextTurn, Player winner) = turn.NextTurn(rotateCamera);
+                    turn = nextTurn;
+                    conclusion = (winner != null) ? winner.color : (PlayerColor)(-1);
+                    if (conclusion != (PlayerColor)(-1))
+                    {
+                        // Game Over
+                        Debug.Log("Game Over - " + conclusion + " Wins");
+                    } else StartCoroutine("TryComputerPlay");
+                }
+            }
+            if (forcedSelection == null && selectedPedina != null)
+            {
+                selectedPedina.GetComponent<Pedina>().selected = false;
+                selectedPedina = null;
+                forcedSelection = null;
+            }
+
+        }
+    }
 
     // (hasMoved, hasCaptured, mustChainCapture)
     public (bool, bool, bool) MoveAction(BoardCell hit)
@@ -203,13 +240,13 @@ public class GameManager : MonoBehaviour
             if (moveIndex != -1)
             {
                 BoardMove move = turn.moves[moveIndex];
-                (bool turnNotOver, bool hasMoved, bool hasCaptured) = turn.Procede(move);
+                (bool turnNotOver, bool hasMoved, bool hasCaptured, bool hasGraduated) = turn.Procede(move);
                 // Move
                 selectedPedina.GetComponent<Pedina>().cell = hit;
                 // Check if dama
                 if (!isDama)
                 {
-                    isDama = (turn.color == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
+                    isDama = (turn.currentPlayer.color == PlayerColor.White) ? hit.indices.Item2 == 7 : hit.indices.Item2 == 0;
                     selectedPedina.GetComponent<Pedina>().dama = isDama;
                 }
                 // Check if captured
@@ -236,6 +273,28 @@ public class GameManager : MonoBehaviour
         else
         {
             return (false, false, false);
+        }
+    }
+
+    IEnumerator TryComputerPlay()
+    {
+        if(turn.currentPlayer is ComputerPlayer computerPlayer) {
+            DateTime startOfPlay = DateTime.Now;
+            // Check Move in Background
+            Task<BoardMove> evaluationHandle = Task<BoardMove>.Factory.StartNew(() => computerPlayer.ChooseMove(turn));
+            while (!evaluationHandle.IsCompleted) yield return null;
+            // Prepare to Play Move
+            if (evaluationHandle.Result != null)
+            {
+                DateTime endOfPlay = DateTime.Now;
+                double elapsedTime = (endOfPlay - startOfPlay).TotalSeconds;
+                float waitTime = 1.5f - ((float) elapsedTime);
+                waitTime = (waitTime > 0) ? waitTime : 0;
+                yield return new WaitForSeconds(waitTime);
+                // Play Move
+                Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
+                computerPlayer.PlayMove(evaluationHandle.Result);
+            } else Debug.Log("Computer is stuck");
         }
     }
 }
