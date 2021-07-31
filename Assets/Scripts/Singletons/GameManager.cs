@@ -203,7 +203,10 @@ public class GameManager : MonoBehaviour
                 SoundManager.Shared.Beep();
             else {
                 if (mustChainCapture)
+                {
                     forcedSelection = selectedPedina;
+                    StartCoroutine("TryComputerPlay");
+                }
                 else {
                     forcedSelection = null;
                     bool rotateCamera = turn.adversaryPlayer is HumanPlayer;
@@ -295,6 +298,13 @@ public class GameManager : MonoBehaviour
                 Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
                 computerPlayer.PlayMove(evaluationHandle.Result);
             } else Debug.Log("Computer is stuck");
+        }
+    }
+    IEnumerator TryChainComputerPlay()
+    {
+        if(turn.currentPlayer is ComputerPlayer computerPlayer) {
+            yield return new WaitForSeconds(1.1f);
+            computerPlayer.PlayMove(turn.moves[0]);
         }
     }
 }

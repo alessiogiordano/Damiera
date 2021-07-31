@@ -107,11 +107,23 @@ public class ComputerPlayer : Player
                 {
                     if (copyOfTurn.layout[k].isValid)
                     {
-                        if (k < copyOfTurn.layout.Length) valueComponent++;
-                        else valueComponent--;
+                        bool ownershipCheck = (copyOfTurn.currentPlayer.color == PlayerColor.White)
+                            ? k < copyOfTurn.layout.Length / 2
+                            : k >= copyOfTurn.layout.Length / 2;
+                        int valueToSum = (copyOfTurn.damaLayout[k]) ? 3 : 1;
+                        valueToSum = (ownershipCheck) ? valueToSum : valueToSum * (-1);
+                        valueComponent += valueToSum;
                     }
                 }
-                if (copyOfTurn.currentPlayer.color != PlayerColor.White) valueComponent *= (-1);
+                // I weight the number of pieces as 95% of value
+                valueComponent *= 0.95f;
+                // I weight the average distance of players as 5% of value
+                valueComponent = valueComponent + (copyOfTurn.layout.AveragePlayerSpread() * 0.05f);
+                // 20% Bonus if captures
+                valueComponent *= (hasCaptured) ? 1.25f : 1;
+                // 50% Bonus if graduates
+                valueComponent *= (hasGraduated) ? 1.5f : 1;
+                //if (copyOfTurn.currentPlayer.color != PlayerColor.White) valueComponent *= (-1);
                 // Check if game is over
                 (BoardTurn copyOfNextTurn, Player winner) = copyOfTurn.NextTurn(false);
                 if(winner != null) return (moveTuple.move, moveTuple.value + valueComponent, new BoardTurn[0], winner);

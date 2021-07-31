@@ -338,6 +338,30 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
 
 public static class BoardCellExtensionMethods
 {
+    public static float AveragePlayerSpread(this BoardCell[] layout)
+    {
+        (float, float) whiteBalance = (0, 0);
+        float whiteCounter = 0;
+        (float, float) blackBalance = (0, 0);
+        float blackCounter = 0;
+        for (int i = 0; i < layout.Length; i++)
+        {
+            if (!layout[i].isValid) continue;
+            if (i < layout.Length / 2)
+            {
+                whiteBalance = (whiteBalance.Item1 + layout[i].indices.Item1, whiteBalance.Item2 + layout[i].indices.Item2);
+                whiteCounter++;
+            }
+            else
+            {
+                blackBalance = (blackBalance.Item1 + layout[i].indices.Item1, blackBalance.Item2 + layout[i].indices.Item2);
+                blackCounter++;
+            }
+        }
+        whiteBalance = (whiteBalance.Item1 / whiteCounter, whiteBalance.Item2 / whiteCounter);
+        blackBalance = (blackBalance.Item1 / blackCounter, blackBalance.Item2 / blackCounter);
+        return Mathf.Sqrt(Mathf.Pow(whiteBalance.Item1 - blackBalance.Item1,2) + Mathf.Pow(whiteBalance.Item2 - blackBalance.Item2,2));
+    }
     public static bool Contains(this BoardCell[] layout, BoardCell cell)
     {
         return Array.Exists(layout, element => element == cell);
