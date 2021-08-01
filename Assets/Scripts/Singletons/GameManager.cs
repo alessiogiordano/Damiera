@@ -97,7 +97,7 @@ public class GameManager : MonoBehaviour
         {
             GameObject.Destroy(this.gameObject);
         }
-        NewGame(new HumanPlayer(PlayerColor.White, "Giocatore 1"), new ComputerPlayer(PlayerColor.Black, 2));
+        NewGame(new HumanPlayer(PlayerColor.White, "Giocatore 1"), new ComputerPlayer(PlayerColor.Black, 4));
     }
     void NewGame(Player whitePlayer, Player blackPlayer)
     {
