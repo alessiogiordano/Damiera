@@ -71,6 +71,11 @@ public class GameManager : MonoBehaviour
     private BoardTurn turn;
     private PlayerColor conclusion;
 
+    private GameStatus _status;
+    public GameStatus status { get => _status; }
+    public void PauseGame() { if(_status != GameStatus.Uninitialized) _status = GameStatus.Paused; }
+    public void ResumeGame() { if(_status != GameStatus.Uninitialized) _status = GameStatus.Running; }
+
     // Singleton
     private static GameManager _shared;
     public static GameManager Shared {
@@ -97,13 +102,10 @@ public class GameManager : MonoBehaviour
         {
             GameObject.Destroy(this.gameObject);
         }
-        NewGame(new HumanPlayer(PlayerColor.White, "Giocatore 1"), new ComputerPlayer(PlayerColor.Black, 4));
+        _status = GameStatus.Uninitialized;
     }
-    void NewGame(Player whitePlayer, Player blackPlayer)
+    public void NewGame(Player whitePlayer, Player blackPlayer)
     {
-        //Debug.Log("White Player is " + whitePlayer.GetType());
-        //Debug.Log("Black Player is " + blackPlayer.GetType());
-
         SetupBoard();
         selectedPedina = null;
         forcedSelection = null;
@@ -115,6 +117,11 @@ public class GameManager : MonoBehaviour
         */
         turn = new BoardTurn(whitePlayer, blackPlayer, layout, damaLayout);
         conclusion = (PlayerColor) (-1);
+    }
+    // TODO: LoadGame & SaveGame
+    public void QuitGame()
+    {
+        UnsetBoard();
     }
     // Game Lifecycle Methods
     void SetupBoard()
@@ -145,6 +152,16 @@ public class GameManager : MonoBehaviour
             pedinaPool[i].GetComponent<Pedina>().Setup(i, root, layout[i], color, pedinaBianca, pedinaNera);
         }
         pedinaPoolReady = true;
+        _status = GameStatus.Running;
+    }
+    void UnsetBoard()
+    {
+        pedinaPoolReady = false;
+        for (int i = 0; i < pedinaPool.Length; i++)
+        {
+            Destroy(pedinaPool[i]);
+        }
+        _status = GameStatus.Uninitialized;
     }
 
     public void Clicked(RaycastHit target)

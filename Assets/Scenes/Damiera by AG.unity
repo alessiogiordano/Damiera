@@ -925,7 +925,7 @@ MonoBehaviour:
   m_Direction: 0
   m_MinValue: 1
   m_MaxValue: 4
-  m_WholeNumbers: 0
+  m_WholeNumbers: 1
   m_Value: 2
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3407,7 +3407,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &270989615
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9351,6 +9351,7 @@ Transform:
   - {fileID: 1994916956}
   - {fileID: 1794134831}
   - {fileID: 1769814942}
+  - {fileID: 995727156}
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -10687,6 +10688,113 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 985641011}
   m_CullTransparentMesh: 1
+--- !u!1 &995727155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 995727156}
+  - component: {fileID: 995727157}
+  m_Layer: 0
+  m_Name: UXManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &995727156
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 995727155}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 824085461}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &995727157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 995727155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25e64686544414d94af466eddb2630ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  welcomeRoot: {fileID: 1221939596}
+  welcomePageOne: {fileID: 2038395292}
+  welcomePageTwo: {fileID: 834470851}
+  welcomePageThree: {fileID: 160226337}
+  welcomePageNextButton: {fileID: 815764162}
+  mainRoot: {fileID: 1584143056}
+  mainHeader: {fileID: 2062177525}
+  mainAboutButton: {fileID: 473345602}
+  mainPreferencesButton: {fileID: 469179820}
+  mainDeleteButton: {fileID: 241604504}
+  mainCancelDeleteButton: {fileID: 762613352}
+  mainNewButton: {fileID: 1845559339}
+  mainCancelNewButton: {fileID: 571327822}
+  mainSlotOne: {fileID: 1707778267}
+  mainSlotTwo: {fileID: 462191874}
+  mainSlotThree: {fileID: 1618703839}
+  mainSlotFour: {fileID: 1537580840}
+  mainHighscore: {fileID: 406927874}
+  mainHighscoreTooltip: {fileID: 636867934}
+  mainHighscoreTooltipText: {fileID: 729144863}
+  aboutRoot: {fileID: 1743908398}
+  aboutTutorialButton: {fileID: 1557405617}
+  aboutCloseButton: {fileID: 305297747}
+  preferencesRoot: {fileID: 105570994}
+  preferencesCancelButton: {fileID: 112215377}
+  preferencesOKButton: {fileID: 286322623}
+  preferencesRotationDropdown: {fileID: 1988607260}
+  preferencesScalingDropdown: {fileID: 1139598331}
+  preferencesDifficultySlider: {fileID: 1966592203}
+  preferencesDifficultyLabel: {fileID: 1894007634}
+  preferencesRotationToggle: {fileID: 1089329267}
+  preferencesVoiceoverToggle: {fileID: 699511030}
+  preferencesSoundtrackToggle: {fileID: 1730612907}
+  preferencesSoundSlider: {fileID: 1051740038}
+  preferencesMusicSlider: {fileID: 657526520}
+  newRoot: {fileID: 1320314465}
+  newCancelButton: {fileID: 1201194079}
+  newStartButton: {fileID: 1458628626}
+  newModeDropdown: {fileID: 199732371}
+  newWhiteNameInput: {fileID: 702606625}
+  newBlackNameInput: {fileID: 1509627697}
+  newDifficultySlider: {fileID: 65432613}
+  newDifficultyLabel: {fileID: 70117791}
+  pauseRoot: {fileID: 1470147993}
+  pauseSaveButton: {fileID: 1434380199}
+  pauseSaveAndQuitButton: {fileID: 1767132148}
+  pauseOKButton: {fileID: 1663760093}
+  pauseWhiteName: {fileID: 379411754}
+  pauseWhiteStats: {fileID: 2036288341}
+  pauseBlackName: {fileID: 1894669799}
+  pauseBlackStats: {fileID: 1906632485}
+  pauseWhiteWithdrawalButton: {fileID: 658741351}
+  pauseDrawButton: {fileID: 290904089}
+  pauseBlackWithdrawalButton: {fileID: 1077765283}
+  pauseNowPlayingTitle: {fileID: 1304951184}
+  pauseNowPlayingStatus: {fileID: 216250824}
+  pauseNowPlayingElapsed: {fileID: 1896417460}
+  pauseNowPlayingTotal: {fileID: 675520844}
+  pauseNowPlayingSlider: {fileID: 1926502019}
+  statusRoot: {fileID: 1790427391}
+  statusInfoButton: {fileID: 1046459785}
+  statusText: {fileID: 525841834}
+  alertRoot: {fileID: 270989614}
+  alertText: {fileID: 936740562}
 --- !u!1 &1036388673
 GameObject:
   m_ObjectHideFlags: 0

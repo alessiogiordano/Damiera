@@ -40,6 +40,8 @@ public class InputManager : MonoBehaviour
     // Update handles input
     void Update()
     {
+        // Check if game is running
+        if(!GameManager.Shared.status.ShouldAcceptGameInput()) return;
         // Mouse
         {
             // Left Click
