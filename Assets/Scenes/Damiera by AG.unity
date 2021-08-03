@@ -10744,10 +10744,20 @@ MonoBehaviour:
   mainCancelDeleteButton: {fileID: 762613352}
   mainNewButton: {fileID: 1845559339}
   mainCancelNewButton: {fileID: 571327822}
+  emptySlotTexture: {fileID: 2800000, guid: 153616dea306a412eac3a0fca9f900ba, type: 3}
+  filledSlotTexture: {fileID: 2800000, guid: e6ddbfd0d142a4fadb28963397373456, type: 3}
   mainSlotOne: {fileID: 1707778267}
+  mainSlotOneIcon: {fileID: 1649888355}
+  mainSlotOneText: {fileID: 1640974741}
   mainSlotTwo: {fileID: 462191874}
+  mainSlotTwoIcon: {fileID: 937080060}
+  mainSlotTwoText: {fileID: 18613809}
   mainSlotThree: {fileID: 1618703839}
+  mainSlotThreeIcon: {fileID: 438297254}
+  mainSlotThreeText: {fileID: 1471008449}
   mainSlotFour: {fileID: 1537580840}
+  mainSlotFourIcon: {fileID: 2042072557}
+  mainSlotFourText: {fileID: 395957601}
   mainHighscore: {fileID: 406927874}
   mainHighscoreTooltip: {fileID: 636867934}
   mainHighscoreTooltipText: {fileID: 729144863}
@@ -10778,6 +10788,7 @@ MonoBehaviour:
   pauseSaveButton: {fileID: 1434380199}
   pauseSaveAndQuitButton: {fileID: 1767132148}
   pauseOKButton: {fileID: 1663760093}
+  pauseLastSaved: {fileID: 1701563741}
   pauseWhiteName: {fileID: 379411754}
   pauseWhiteStats: {fileID: 2036288341}
   pauseBlackName: {fileID: 1894669799}

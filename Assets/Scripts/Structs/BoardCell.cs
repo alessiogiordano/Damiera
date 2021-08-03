@@ -94,21 +94,10 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     public PlayerColor GetOwner(BoardCell[] layout)
     {
         int i = GetIndex(layout);
-        Debug.Log("this is in layout at " + i);
+        //Debug.Log("this is in layout at " + i);
         if (i != -1)
             return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
         return (PlayerColor) (-1);
-        /*
-        for (int i = 0; i < layout.Length; i++)
-        {
-            if (layout[i] == this)
-            {
-                //Debug.Log("this is in layout at " + i);
-                return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
-            }
-        }
-        return (PlayerColor) (-1);
-        */
     }
     public bool IsSibling(BoardCell[] layout, BoardCell sibling)
     {
@@ -178,36 +167,6 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
         }
         return result;
     }
-    // Manipulate Array of BoardCell
-    /*
-    public bool Move(BoardCell[] layout, BoardCell destination)
-    {
-        if (destination.isValid) return false;
-        if (!destination.CheckAvailability(layout)) return false;
-        for (int i = 0; i < layout.Length; i++)
-        {
-            if (layout[i] == this)
-            {
-                layout[i] = destination;
-                Debug.Log("Moved: " + this.cell + " to " + destination.cell);
-                return true;
-            }
-        }
-        return false;
-    }
-    public bool CaptureIn(BoardCell[] layout)
-    {
-        for (int i = 0; i < layout.Length; i++)
-        {
-            if (layout[i] == this)
-            {
-                layout[i] = BoardCell.invalidCell;
-                Debug.Log("Captured: " + this.cell);
-                return true;
-            }
-        }
-        return false;
-    }*/
     public bool CheckAvailability(BoardCell[] layout)
     {
         BoardCell thisOne = this;

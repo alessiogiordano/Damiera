@@ -72,9 +72,57 @@ public class GameManager : MonoBehaviour
     private PlayerColor conclusion;
 
     private GameStatus _status;
+    private int selectedSlot;
     public GameStatus status { get => _status; }
     public void PauseGame() { if(_status != GameStatus.Uninitialized) _status = GameStatus.Paused; }
     public void ResumeGame() { if(_status != GameStatus.Uninitialized) _status = GameStatus.Running; }
+    public string shortStats
+    {
+        get
+        {
+            Player firstPlayer = turn.currentPlayer;
+            string firstPlayerName = (firstPlayer is HumanPlayer) ? ((HumanPlayer) firstPlayer).name : "Computer";
+            Player secondPlayer = turn.adversaryPlayer;
+            string secondPlayerName = (secondPlayer is HumanPlayer) ? ((HumanPlayer) secondPlayer).name : "Computer";
+            string gameStatus = (conclusion != (PlayerColor)(-1)) ? ((conclusion == PlayerColor.White) ? "(Vince il bianco)" : (conclusion == PlayerColor.Black) ? "(Vince il nero)" : "(Patta)") : ((firstPlayer.color == PlayerColor.White) ? "(Muove il bianco)" : (firstPlayer.color == PlayerColor.Black) ? "(Muove il nero)" : "");
+            return (firstPlayer.color == PlayerColor.White) ? $"{firstPlayerName} - {secondPlayerName}   {gameStatus}" : $"{secondPlayerName} - {firstPlayerName}   {gameStatus}";
+        }
+    }
+    public (int, string, string, int, int, int, int, int, int, bool) detailedStats
+    {
+        get
+        {
+            Player firstPlayer = turn.currentPlayer;
+            string firstPlayerName = (firstPlayer is HumanPlayer) ? ((HumanPlayer) firstPlayer).name : "Computer";
+            Player secondPlayer = turn.adversaryPlayer;
+            string secondPlayerName = (secondPlayer is HumanPlayer) ? ((HumanPlayer) secondPlayer).name : "Computer";
+            string whitePlayer = (firstPlayer.color == PlayerColor.White) ? firstPlayerName : secondPlayerName;
+            string blackPlayer = (firstPlayer.color == PlayerColor.Black) ? firstPlayerName : secondPlayerName;
+            BoardCell[] currentLayout = (BoardCell[]) layout.Clone();
+            bool[] currentDamaLayout = (bool[]) damaLayout.Clone();
+            int whitePieceCount = 0;
+            int whiteDamaCount = 0;
+            int whiteScore = (firstPlayer.color == PlayerColor.White) ? firstPlayer.score : secondPlayer.score;
+            int blackPieceCount = 0;
+            int blackDamaCount = 0;
+            int blackScore = (firstPlayer.color == PlayerColor.Black) ? firstPlayer.score : secondPlayer.score;
+            for(int i = 0; i < layout.Length; i++)
+            {
+                if (layout[i].isValid && i < layout.Length / 2)
+                {
+                    whitePieceCount++;
+                    if (damaLayout[i]) whiteDamaCount++;
+                }
+                if (layout[i].isValid && i >= layout.Length / 2)
+                {
+                    blackPieceCount++;
+                    if (damaLayout[i]) blackDamaCount++;
+                }
+            }
+            bool isConcluded = (conclusion != (PlayerColor)(-1));
+            return (selectedSlot, whitePlayer, blackPlayer, whitePieceCount, whiteDamaCount, whiteScore, blackPieceCount, blackDamaCount, blackDamaCount, isConcluded);
+        }
+    }
 
     // Singleton
     private static GameManager _shared;
@@ -104,19 +152,47 @@ public class GameManager : MonoBehaviour
         }
         _status = GameStatus.Uninitialized;
     }
-    public void NewGame(Player whitePlayer, Player blackPlayer)
+    public void LoadGame(int slot)
     {
+        if (PersistanceManager.SlotContainsData(slot))
+        {
+            selectedSlot = slot;
+            var loadedGame = PersistanceManager.GetSlot(slot);
+            SetupBoard(loadedGame.Item11);
+            damaLayout = loadedGame.Item12;
+            selectedPedina = null;
+            forcedSelection = null;
+            Player whitePlayer = (loadedGame.Item4) ? (Player) new HumanPlayer(PlayerColor.White, loadedGame.Item2) : (Player) new ComputerPlayer(PlayerColor.White, loadedGame.Item8);
+            Player blackPlayer = (loadedGame.Item5) ? (Player) new HumanPlayer(PlayerColor.Black, loadedGame.Item3) : (Player) new ComputerPlayer(PlayerColor.Black, loadedGame.Item8);
+            // If game is not over set up turns
+            if (!loadedGame.Item9 && loadedGame.Item10 == PlayerColor.White)       
+                turn = new BoardTurn(whitePlayer, blackPlayer, loadedGame.Item11, loadedGame.Item12);
+            else if (!loadedGame.Item9 && loadedGame.Item10 == PlayerColor.Black)       
+                turn = new BoardTurn(blackPlayer, whitePlayer, loadedGame.Item11, loadedGame.Item12);
+            // If game is done then set winner
+            if (loadedGame.Item9)
+                conclusion = loadedGame.Item10;
+            else
+                conclusion = (PlayerColor) (-1);
+            UXManager.Shared.UpdateStatus(shortStats);
+            StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
+        }
+        else
+        {
+            selectedSlot = 0;
+            UXManager.Shared.AbortGameLoad();
+        }
+    }
+    public void NewGame(int slot, Player whitePlayer, Player blackPlayer)
+    {
+        selectedSlot = slot;
         SetupBoard();
         selectedPedina = null;
         forcedSelection = null;
-        /*
-        SetupBoard(new BoardCell[24] {
-            new BoardCell(0,0), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell,
-            new BoardCell(7,7), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell
-        });
-        */
         turn = new BoardTurn(whitePlayer, blackPlayer, layout, damaLayout);
         conclusion = (PlayerColor) (-1);
+        UXManager.Shared.UpdateStatus(shortStats);
+        StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
     }
     // TODO: LoadGame & SaveGame
     public void QuitGame()
@@ -167,6 +243,11 @@ public class GameManager : MonoBehaviour
     public void Clicked(RaycastHit target)
     {
         if (conclusion != (PlayerColor)(-1))
+        {
+            SoundManager.Shared.Beep();
+            return;
+        }
+        if(turn.currentPlayer is ComputerPlayer computerPlayer)
         {
             SoundManager.Shared.Beep();
             return;
@@ -230,11 +311,8 @@ public class GameManager : MonoBehaviour
                     (BoardTurn nextTurn, Player winner) = turn.NextTurn(rotateCamera);
                     turn = nextTurn;
                     conclusion = (winner != null) ? winner.color : (PlayerColor)(-1);
-                    if (conclusion != (PlayerColor)(-1))
-                    {
-                        // Game Over
-                        Debug.Log("Game Over - " + conclusion + " Wins");
-                    } else StartCoroutine("TryComputerPlay");
+                    UXManager.Shared.UpdateStatus(shortStats);
+                    if (conclusion == (PlayerColor)(-1)) StartCoroutine("TryComputerPlay");
                 }
             }
             if (forcedSelection == null && selectedPedina != null)
@@ -308,11 +386,11 @@ public class GameManager : MonoBehaviour
             {
                 DateTime endOfPlay = DateTime.Now;
                 double elapsedTime = (endOfPlay - startOfPlay).TotalSeconds;
-                float waitTime = 1.5f - ((float) elapsedTime);
+                float waitTime = 2f - ((float) elapsedTime);
                 waitTime = (waitTime > 0) ? waitTime : 0;
                 yield return new WaitForSeconds(waitTime);
                 // Play Move
-                Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
+                //Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
                 computerPlayer.PlayMove(evaluationHandle.Result);
             } else Debug.Log("Computer is stuck");
         }
