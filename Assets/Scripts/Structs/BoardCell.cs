@@ -334,6 +334,29 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
         }
     }
     /* ********** */
+
+    public static BoardCell[] Deserialize(string source)
+    {
+        if (source.Length != 48) return new BoardCell[0];
+        BoardCell[] result = new BoardCell[source.Length/2];
+        for (int i = 0; i < source.Length; i+=2)
+        {
+            int column = Convert.ToInt32(source[i]);
+            int row = Convert.ToInt32(source[i+1]);
+            result[i/2] = new BoardCell(column, row);
+        }
+        return result;
+    }
+    public static bool[] DeserializeDama(string source)
+    {
+        if (source.Length != 24) return new bool[0];
+        bool[] result = new bool[source.Length];
+        for (int i = 0; i < source.Length; i+=2)
+        {
+            result[i] = source[i] == '0' ? false : true;
+        }
+        return result;
+    }
 }
 
 public static class BoardCellExtensionMethods
@@ -361,6 +384,26 @@ public static class BoardCellExtensionMethods
         whiteBalance = (whiteBalance.Item1 / whiteCounter, whiteBalance.Item2 / whiteCounter);
         blackBalance = (blackBalance.Item1 / blackCounter, blackBalance.Item2 / blackCounter);
         return Mathf.Sqrt(Mathf.Pow(whiteBalance.Item1 - blackBalance.Item1,2) + Mathf.Pow(whiteBalance.Item2 - blackBalance.Item2,2));
+    }
+    public static string Serialize(this BoardCell[] layout)
+    {
+        string result = "";
+        foreach (var cell in layout)
+        {
+            (int column, int row) = cell.indices;
+            result += $"{column}{row}";
+        }
+        return result;
+    }
+    public static string Serialize(this bool[] damaLayout)
+    {
+        string result = "";
+        foreach (var dama in damaLayout)
+        {
+            
+            result += dama ? '1' : '0';
+        }
+        return result;
     }
     public static bool Contains(this BoardCell[] layout, BoardCell cell)
     {
