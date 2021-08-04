@@ -120,7 +120,7 @@ public class GameManager : MonoBehaviour
                 }
             }
             bool isConcluded = (conclusion != (PlayerColor)(-1));
-            return (selectedSlot, whitePlayer, blackPlayer, whitePieceCount, whiteDamaCount, whiteScore, blackPieceCount, blackDamaCount, blackDamaCount, isConcluded);
+            return (selectedSlot, whitePlayer, blackPlayer, whitePieceCount, whiteDamaCount, whiteScore, blackPieceCount, blackDamaCount, blackScore, isConcluded);
         }
     }
 
@@ -164,6 +164,8 @@ public class GameManager : MonoBehaviour
             forcedSelection = null;
             Player whitePlayer = (loadedGame.Item4) ? (Player) new HumanPlayer(PlayerColor.White, loadedGame.Item2) : (Player) new ComputerPlayer(PlayerColor.White, loadedGame.Item8);
             Player blackPlayer = (loadedGame.Item5) ? (Player) new HumanPlayer(PlayerColor.Black, loadedGame.Item3) : (Player) new ComputerPlayer(PlayerColor.Black, loadedGame.Item8);
+            whitePlayer.AddScore(loadedGame.Item6);
+            blackPlayer.AddScore(loadedGame.Item7);
             // If game is not over set up turns
             if (!loadedGame.Item9 && loadedGame.Item10 == PlayerColor.White)       
                 turn = new BoardTurn(whitePlayer, blackPlayer, loadedGame.Item11, loadedGame.Item12);
@@ -194,9 +196,38 @@ public class GameManager : MonoBehaviour
         UXManager.Shared.UpdateStatus(shortStats);
         StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
     }
-    // TODO: LoadGame & SaveGame
+    // Draw and Retirement
+    public void WithdrawGame(PlayerColor withdrawingColor = PlayerColor.Draw)
+    {
+        if (withdrawingColor == PlayerColor.White) conclusion = PlayerColor.Black;
+        if (withdrawingColor == PlayerColor.Black) conclusion = PlayerColor.White;
+        if (withdrawingColor == PlayerColor.Draw) conclusion = PlayerColor.Draw;
+        UXManager.Shared.UpdateStatus(shortStats);
+    }
+    public void SaveGame()
+    {
+        if (status != GameStatus.Uninitialized && selectedSlot != 0)
+        {
+            var stats = detailedStats;
+            bool isCurrentHuman = turn.currentPlayer is HumanPlayer;
+            bool isAdversaryHuman = turn.adversaryPlayer is HumanPlayer;
+            int difficultyLevel = (turn.currentPlayer is ComputerPlayer) ? ((ComputerPlayer) turn.currentPlayer).movesAhead
+                                : (turn.adversaryPlayer is ComputerPlayer) ? ((ComputerPlayer) turn.adversaryPlayer).movesAhead
+                                : (int) PersistanceManager.computerDifficulty;
+            PersistanceManager.SaveSlot(selectedSlot, stats.Item2, stats.Item3,
+                                turn.currentPlayer.color == PlayerColor.White ? isCurrentHuman : isAdversaryHuman,
+                                turn.adversaryPlayer.color == PlayerColor.Black ? isAdversaryHuman : isCurrentHuman,
+                                stats.Item6, stats.Item9, difficultyLevel,
+                                stats.Item10, stats.Item10 ? conclusion : turn.currentPlayer.color,
+                                layout, damaLayout
+                               );
+            if (stats.Item6 >= stats.Item9) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
+            else PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
+        }
+    }
     public void QuitGame()
     {
+        StopAllCoroutines();
         UnsetBoard();
     }
     // Game Lifecycle Methods
@@ -205,6 +236,7 @@ public class GameManager : MonoBehaviour
         SetupBoard(BoardCell.defaultLayout);
     }
     void SetupBoard(BoardCell[] layout) {
+        //layout.DebugString();
         if (layout.Length != 24)
         {
             Debug.Log("Malformed Board Layout");
@@ -228,6 +260,7 @@ public class GameManager : MonoBehaviour
             pedinaPool[i].GetComponent<Pedina>().Setup(i, root, layout[i], color, pedinaBianca, pedinaNera);
         }
         pedinaPoolReady = true;
+        CameraManager.Shared.TurnCameraToDefault();
         _status = GameStatus.Running;
     }
     void UnsetBoard()

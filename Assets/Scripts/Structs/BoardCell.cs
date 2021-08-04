@@ -296,12 +296,14 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
 
     public static BoardCell[] Deserialize(string source)
     {
-        if (source.Length != 48) return new BoardCell[0];
-        BoardCell[] result = new BoardCell[source.Length/2];
-        for (int i = 0; i < source.Length; i+=2)
+        string[] splittedSource = source.Split(',');
+        if (splittedSource.Length != 48) return new BoardCell[0];
+        BoardCell[] result = new BoardCell[splittedSource.Length/2];
+        for (int i = 0; i < splittedSource.Length; i+=2)
         {
-            int column = Convert.ToInt32(source[i]);
-            int row = Convert.ToInt32(source[i+1]);
+            int column = Convert.ToInt32(splittedSource[i]);
+            int row = Convert.ToInt32(splittedSource[i+1]);
+            //Debug.Log($"array[i]={splittedSource[i]}, array[i+1]={splittedSource[i+1]}, column={column}, row={row}");
             result[i/2] = new BoardCell(column, row);
         }
         return result;
@@ -350,8 +352,11 @@ public static class BoardCellExtensionMethods
         foreach (var cell in layout)
         {
             (int column, int row) = cell.indices;
-            result += $"{column}{row}";
+            result += $"{column},{row},";
         }
+        result = result.Length > 0 ? result.Remove(result.Length - 1, 1) : result;
+        //layout.DebugString();
+        //Debug.Log(result);
         return result;
     }
     public static string Serialize(this bool[] damaLayout)
@@ -359,7 +364,6 @@ public static class BoardCellExtensionMethods
         string result = "";
         foreach (var dama in damaLayout)
         {
-            
             result += dama ? '1' : '0';
         }
         return result;

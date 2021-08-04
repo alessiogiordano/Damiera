@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class UXManager : MonoBehaviour
 {
@@ -43,6 +44,7 @@ public class UXManager : MonoBehaviour
         [SerializeField] private Button aboutTutorialButton;
         [SerializeField] private Button aboutCloseButton;
     [SerializeField] private GameObject preferencesRoot;
+        [SerializeField] private Button preferencesResetButton;
         [SerializeField] private Button preferencesCancelButton;
         [SerializeField] private Button preferencesOKButton;
         [SerializeField] private Dropdown preferencesRotationDropdown;
@@ -130,6 +132,7 @@ public class UXManager : MonoBehaviour
         mainSlotFour.onClick.AddListener(MainSlotFour);
         aboutTutorialButton.onClick.AddListener(AboutTutorialButton);
         aboutCloseButton.onClick.AddListener(AboutCloseButton);
+        preferencesResetButton.onClick.AddListener(PreferencesResetButton);
         preferencesCancelButton.onClick.AddListener(PreferencesCancelButton);
         preferencesOKButton.onClick.AddListener(PreferencesOKButton);
         newCancelButton.onClick.AddListener(NewCancelButton);
@@ -141,9 +144,27 @@ public class UXManager : MonoBehaviour
         pauseDrawButton.onClick.AddListener(PauseDrawButton);
         pauseBlackWithdrawalButton.onClick.AddListener(PauseBlackWithdrawalButton);
         statusInfoButton.onClick.AddListener(StatusInfoButton);
+
+        // Setup User Interface Sliders
+        preferencesDifficultySlider.onValueChanged.AddListener(data => PreferencesDifficultySlider());
+        newDifficultySlider.onValueChanged.AddListener(data => NewDifficultySlider());
+        preferencesSoundSlider.onValueChanged.AddListener(data => TestSoundVolume());
+        preferencesMusicSlider.onValueChanged.AddListener(data => TestMusicVolume());
+
+        // Setup Hover Events
+        EventTrigger tooltipTriggers = mainHighscore.gameObject.AddComponent<EventTrigger>();;
+        EventTrigger.Entry enterEntry = new EventTrigger.Entry();
+            enterEntry.eventID = EventTriggerType.PointerEnter;
+            enterEntry.callback.AddListener((data) => { ShowScoreboard(); });
+        EventTrigger.Entry leaveEntry = new EventTrigger.Entry();
+            leaveEntry.eventID = EventTriggerType.PointerExit;
+            leaveEntry.callback.AddListener((data) => { HideScoreboard(); });
+        tooltipTriggers.triggers.Add(enterEntry);
+        tooltipTriggers.triggers.Add(leaveEntry);
         
-        // Debug
-        ShowWelcome();
+        // Main Views
+        if(PersistanceManager.firstLoad) ShowWelcome();
+        else ShowMain();
     }
     void HideAll()
     {
@@ -173,7 +194,7 @@ public class UXManager : MonoBehaviour
             {
                 case 1: welcomePageTwo.SetActive(true); welcomePageOne.SetActive(false); welcomeLocation = 2; break;
                 case 2: welcomePageThree.SetActive(true); welcomePageTwo.SetActive(false); welcomeLocation = 3; break;
-                case 3: welcomePageThree.SetActive(false); ShowMain(); welcomeLocation = 0; break;
+                case 3: welcomePageThree.SetActive(false); PersistanceManager.firstLoad = false; ShowMain(); welcomeLocation = 0; break;
                 default: ShowWelcome(); break;
             }
         }
@@ -257,6 +278,21 @@ public class UXManager : MonoBehaviour
             void RenderTopScore() => mainHighscore.text = PersistanceManager.record;
             void RenderScoreboard() => mainHighscoreTooltipText.text = string.Join("\n", PersistanceManager.scoreboard);
             void RenderScores() { RenderTopScore(); RenderScoreboard(); }
+            void ShowScoreboard()
+            {
+                if (!PersistanceManager.hasRecord) return;
+                mainHighscoreTooltip.SetActive(true);
+                Color color = mainHighscore.color;
+                color.a = 0;
+                mainHighscore.color = color;
+            }
+            void HideScoreboard()
+            {
+                mainHighscoreTooltip.SetActive(false);
+                Color color = mainHighscore.color;
+                color.a = 1;
+                mainHighscore.color = color;
+            }
     void ShowAboutPanel() => aboutRoot.SetActive(true);
         void AboutTutorialButton()
         {
@@ -269,12 +305,29 @@ public class UXManager : MonoBehaviour
         preferencesRoot.SetActive(true);
         RenderPreferences();
     }
+        void PreferencesResetButton()
+        {
+            PersistanceManager.DeleteScoreboard();
+            RenderScores();
+        }
         void PreferencesCancelButton() => preferencesRoot.SetActive(false);
         void PreferencesOKButton()
         {
             SavePreferences();
             preferencesRoot.SetActive(false);
         }
+        void DifficultySlider(float value, Text label)
+        {
+            label.text = $"Il computer pensa {value} {(value != 1 ? "mosse" : "mossa")} in anticipo";
+        }
+        void PreferencesDifficultySlider() => DifficultySlider(preferencesDifficultySlider.value, preferencesDifficultyLabel);
+        void TestVolume(float value)
+        {
+            // TODO: emit a beep at the specified value
+            Debug.Log($"BEEP {value}");
+        }
+        void TestSoundVolume() => TestVolume(preferencesSoundSlider.value);
+        void TestMusicVolume() => TestVolume(preferencesMusicSlider.value);
         void RenderPreferences()
         {
             preferencesRotationDropdown.value = (int) PersistanceManager.viewportRotation;
@@ -296,12 +349,18 @@ public class UXManager : MonoBehaviour
             PersistanceManager.autoRotate = preferencesRotationToggle.isOn;
             PersistanceManager.voiceover = preferencesVoiceoverToggle.isOn;
             PersistanceManager.soundtrack = preferencesSoundtrackToggle.isOn;
-            PersistanceManager.soundVolume = preferencesSoundSlider.value;
-            PersistanceManager.musicVolume = preferencesMusicSlider.value;
+            PersistanceManager.soundVolume = (int) preferencesSoundSlider.value;
+            PersistanceManager.musicVolume = (int) preferencesMusicSlider.value;
         }
     void ShowNew(int index)
     {
         selectedSlot = index;
+        newModeDropdown.value = 0;
+        int defaultComputerDifficulty = (int) PersistanceManager.computerDifficulty;
+            newDifficultySlider.value = defaultComputerDifficulty;
+            newDifficultyLabel.text = $"Il computer pensa {defaultComputerDifficulty} {(defaultComputerDifficulty != 1 ? "mosse" : "mossa")} in anticipo";
+        newWhiteNameInput.text = "";
+        newBlackNameInput.text = "";
         newRoot.SetActive(true);
     }
         void NewCancelButton() =>  newRoot.SetActive(false);
@@ -319,6 +378,7 @@ public class UXManager : MonoBehaviour
                 GameManager.Shared.NewGame(selectedSlot, whitePlayer, blackPlayer);
             } 
         }
+        void NewDifficultySlider() => DifficultySlider(newDifficultySlider.value, newDifficultyLabel);
         void RenderGameView()
         {
             HideAll();
@@ -338,11 +398,14 @@ public class UXManager : MonoBehaviour
         RenderPause();
         pauseRoot.SetActive(true);
     }
-        void PauseSaveButton() {}
+        void PauseSaveButton() {
+            if (GameManager.Shared != null)
+                GameManager.Shared.SaveGame();
+            RenderPause();
+        }
         void PauseSaveAndQuitButton()
         {
             PauseSaveButton();
-            // TODO: Close Game
             if (GameManager.Shared != null)
                 GameManager.Shared.QuitGame();
             HideAll();
@@ -354,9 +417,21 @@ public class UXManager : MonoBehaviour
                 GameManager.Shared.ResumeGame();
             pauseRoot.SetActive(false);
         }
-        void PauseWhiteWithdrawalButton() => PauseSaveAndQuitButton();
-        void PauseDrawButton() => PauseSaveAndQuitButton();
-        void PauseBlackWithdrawalButton() => PauseSaveAndQuitButton();
+        void PauseWhiteWithdrawalButton()
+        {
+            GameManager.Shared.WithdrawGame(PlayerColor.White);
+            PauseSaveAndQuitButton();
+        }
+        void PauseDrawButton()
+        {
+            GameManager.Shared.WithdrawGame();
+            PauseSaveAndQuitButton();
+        }
+        void PauseBlackWithdrawalButton()
+        {
+            GameManager.Shared.WithdrawGame(PlayerColor.Black);
+            PauseSaveAndQuitButton();
+        }
         void RenderPause()
         {
             var gameStats = (0, "", "", 0, 0, 0, 0, 0, 0, true);

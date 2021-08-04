@@ -19,6 +19,7 @@ public class BoardMove
             return _value;
         }
     }
+    public int moveScore { get => _value; }
     public BoardMove(BoardCell source, BoardCell destination)
     {
         this.source = source;

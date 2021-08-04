@@ -89,6 +89,7 @@ public struct BoardTurn
         (BoardCell[] newLayout, bool[] newDamaLayout, bool hasMoved, bool hasCaptured, bool hasGraduated) = move.ApplyTo(_layout, _damaLayout);
         this._layout = newLayout;
         this._damaLayout = newDamaLayout;
+        currentPlayer.AddScore(move.moveScore);
         return (turnNotOver, hasMoved, hasCaptured, hasGraduated);
     }
 

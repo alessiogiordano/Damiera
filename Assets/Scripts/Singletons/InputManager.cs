@@ -86,7 +86,7 @@ public class InputManager : MonoBehaviour
                 }
             }
             // Drag
-            {
+            if (PersistanceManager.canRotateWithMouse) {
                 if (mouseStatus == MouseStatus.Down)
                 {
                     if  (
@@ -107,7 +107,7 @@ public class InputManager : MonoBehaviour
             }
         }
         // Keyboard
-        {
+        if (PersistanceManager.canRotateWithKeyboard) {
             // LeftArrow
             {
                 if (Input.GetKeyDown(KeyCode.LeftArrow))

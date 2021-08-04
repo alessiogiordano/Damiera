@@ -72,7 +72,7 @@ public class CameraManager : MonoBehaviour
             yield return null;
         }
     }
-    public void TurnCameraToDefault(float additionalHorizontalRotation, bool withAnimation = false, float delay = 0.0f)
+    public void TurnCameraToDefault(float additionalHorizontalRotation = 0f, bool withAnimation = false, float delay = 0.0f)
     {
         TurnCamera(defaultAngle, additionalHorizontalRotation, false, withAnimation, delay);
     }
