@@ -28,7 +28,6 @@ public struct PedinaAnimation
     public Vector3 frame {
         get
         {
-            //return _destination;
             if (running)
             {
                 // Progress since last frame = Time elapsed since last frame / expected duration of the animation;

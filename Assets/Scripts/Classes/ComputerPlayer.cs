@@ -15,7 +15,7 @@ public class ComputerPlayer : Player
     public BoardMove ChooseMove(BoardTurn turn)
     {
         // Setup
-        int levelsLeft = movesAhead / 2; // Io considero a coppie
+        int levelsLeft = movesAhead / 2;
         (BoardMove, float, BoardTurn[], Player)[] movesEvaluation = new (BoardMove, float, BoardTurn[], Player)[turn.moves.Length];
         for (int i = 0; i < turn.moves.Length; i++) movesEvaluation[i] = (turn.moves[i], 0, new BoardTurn[1] { turn }, null);
         // Collect Evaluation Values

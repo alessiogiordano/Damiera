@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+#if UNITY_WEBGL
+using System.Runtime.InteropServices;
+#endif
 
 public class UXManager : MonoBehaviour
 {
@@ -162,12 +165,24 @@ public class UXManager : MonoBehaviour
             leaveEntry.callback.AddListener((data) => { HideScoreboard(); });
         tooltipTriggers.triggers.Add(enterEntry);
         tooltipTriggers.triggers.Add(leaveEntry);
+
+        // Hide AI Options as Threads are not supported in WebGL
+        #if UNITY_WEBGL
+        newModeDropdown.options.RemoveAt(3);
+        newModeDropdown.options.RemoveAt(2);
+        newModeDropdown.options.RemoveAt(1);
+        #endif
         
         // Main Views
         StartCoroutine("UpdateDPI");
         if(PersistanceManager.firstLoad) ShowWelcome();
         else ShowMain();
     }
+
+    #if UNITY_WEBGL
+        [DllImport("__Internal")]
+        private static extern double GetWebDPI();
+    #endif
 
     IEnumerator UpdateDPI()
     {
@@ -180,8 +195,12 @@ public class UXManager : MonoBehaviour
                 case HdpiScaling.Single: scaler.scaleFactor = 1f; break;
                 case HdpiScaling.Half: scaler.scaleFactor = 1.5f; break;
                 case HdpiScaling.Double: scaler.scaleFactor = 2f; break;
-                case HdpiScaling.Auto: 
+                case HdpiScaling.Auto:
+                    #if UNITY_WEBGL && !UNITY_EDITOR
+                    float dpi = scaler.scaleFactor = ((float) GetWebDPI()) * 100.0f;
+                    #else
                     float dpi = scaler.scaleFactor = Screen.dpi;
+                    #endif
                     if (dpi == 0) scaler.scaleFactor = 1f;
                     else
                     {

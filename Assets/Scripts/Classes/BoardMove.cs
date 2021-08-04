@@ -89,7 +89,6 @@ public class BoardMove
 
     public static bool[] UpdateDamaLayout(BoardCell[] layout, bool[] damaLayout)
     {
-        // (GetOwner(layout) == PlayerColor.White) ? nextCell.indices.Item2 == 7 : nextCell.indices.Item2 == 0;
         if (layout.Length != damaLayout.Length) return damaLayout;
         bool[] alteredDamaLayout = (bool[]) damaLayout.Clone();
         for (int i = 0; i < layout.Length; i++)

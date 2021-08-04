@@ -15,14 +15,13 @@ public struct BoardTurn
     private bool[] _damaLayout;
     public bool[] damaLayout { get => _damaLayout; }
     public bool completed { get => _moves.Length == 0; }
-
+    
     public BoardTurn(Player currentPlayer, Player adversaryPlayer, BoardCell[] layout, bool[] damaLayout)
     {
         this.currentPlayer = currentPlayer;
         this.adversaryPlayer = adversaryPlayer;
         this._layout = layout;
         this._damaLayout = damaLayout;
-        //this._layout.DebugString();
         // Construct Array
         BoardMove[] result = new BoardMove[0];
         int layoutSubsetLength = layout.Length / 2;
@@ -39,7 +38,6 @@ public struct BoardTurn
             }
             
         }
-        //result.DebugString(); // Fino a qui funziona bene
         // Evaluate Array 
         int maxValue = 0;
         BoardMove[] processedResult = new BoardMove[0];
@@ -57,7 +55,6 @@ public struct BoardTurn
             }
         }
         this._moves = processedResult;
-        //this._moves.DebugString(); // Crasha qui
     }
 
     public int Check(BoardCell source, BoardCell destination)
@@ -83,7 +80,6 @@ public struct BoardTurn
             }
         }
         _moves = newMoveSet;
-        //this._moves.DebugString();
         // Update Layout
         bool turnNotOver = newMoveSet.Length > 0;
         (BoardCell[] newLayout, bool[] newDamaLayout, bool hasMoved, bool hasCaptured, bool hasGraduated) = move.ApplyTo(_layout, _damaLayout);

@@ -60,7 +60,6 @@ public class InputManager : MonoBehaviour
                     if (mouseStatus == MouseStatus.Down)
                     {
                         // Handle Click
-                        // Debug.Log("Click alle Coordinate " + mouseStartPosition.ToString());
                         {
                             RaycastHit hit;
                             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -105,7 +104,6 @@ public class InputManager : MonoBehaviour
                 else if (mouseStatus == MouseStatus.Drag)
                 {
                     // Handle OnDrag
-                    // Debug.Log("Drag alle Coordinate " + Input.mousePosition.ToString());
                     CameraManager.Shared.OnInputDown(Input.mousePosition.ToDirectionStartingFrom(mouseStartPosition));
                 }
             }

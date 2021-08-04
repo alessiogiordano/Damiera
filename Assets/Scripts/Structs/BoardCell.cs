@@ -94,7 +94,6 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
     public PlayerColor GetOwner(BoardCell[] layout)
     {
         int i = GetIndex(layout);
-        //Debug.Log("this is in layout at " + i);
         if (i != -1)
             return (i < (layout.Length / 2)) ? PlayerColor.White : PlayerColor.Black;
         return (PlayerColor) (-1);
@@ -303,7 +302,6 @@ public struct BoardCell : System.IEquatable<BoardCell>, System.IComparable<Board
         {
             int column = Convert.ToInt32(splittedSource[i]);
             int row = Convert.ToInt32(splittedSource[i+1]);
-            //Debug.Log($"array[i]={splittedSource[i]}, array[i+1]={splittedSource[i+1]}, column={column}, row={row}");
             result[i/2] = new BoardCell(column, row);
         }
         return result;
@@ -355,8 +353,6 @@ public static class BoardCellExtensionMethods
             result += $"{column},{row},";
         }
         result = result.Length > 0 ? result.Remove(result.Length - 1, 1) : result;
-        //layout.DebugString();
-        //Debug.Log(result);
         return result;
     }
     public static string Serialize(this bool[] damaLayout)

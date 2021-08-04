@@ -137,6 +137,7 @@ public class SoundManager : MonoBehaviour
     }
     IEnumerator Speak(string[] clips)
     {
+        if (!PersistanceManager.voiceover) yield break;
         _isSpeaking = true;
         foreach (var clip in clips)
         {

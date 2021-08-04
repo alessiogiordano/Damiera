@@ -176,10 +176,9 @@ public class GameManager : MonoBehaviour
             whitePlayer.AddScore(loadedGame.Item6);
             blackPlayer.AddScore(loadedGame.Item7);
             // If game is not over set up turns
-            if (!loadedGame.Item9 && loadedGame.Item10 == PlayerColor.White)       
-                turn = new BoardTurn(whitePlayer, blackPlayer, loadedGame.Item11, loadedGame.Item12);
-            else if (!loadedGame.Item9 && loadedGame.Item10 == PlayerColor.Black)       
+            if (loadedGame.Item10 == PlayerColor.Black)       
                 turn = new BoardTurn(blackPlayer, whitePlayer, loadedGame.Item11, loadedGame.Item12);
+            else turn = new BoardTurn(whitePlayer, blackPlayer, loadedGame.Item11, loadedGame.Item12);
             // If game is done then set winner
             if (loadedGame.Item9)
                 conclusion = loadedGame.Item10;
@@ -237,14 +236,16 @@ public class GameManager : MonoBehaviour
                                 stats.Item10, stats.Item10 ? conclusion : turn.currentPlayer.color,
                                 layout, damaLayout
                                );
-            // Save score only if game is concluded and player is human
+            // Save score only if game is concluded and player is human and score is more than 0
             if (stats.Item10)
             {
-                if (isWhiteHuman && isBlackHuman)
+                if (isWhiteHuman && isBlackHuman && stats.Item6 > 0 && stats.Item9 > 0)
+                {
                     if (stats.Item6 >= stats.Item9) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
                     else PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
-                else if (isWhiteHuman) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
-                else if (isBlackHuman) PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
+                }
+                else if (isWhiteHuman && stats.Item6 > 0) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
+                else if (isBlackHuman && stats.Item9 > 0) PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
             }
         }
     }
@@ -463,7 +464,6 @@ public class GameManager : MonoBehaviour
                 waitTime = (waitTime > 0) ? waitTime : 0;
                 yield return new WaitForSeconds(waitTime);
                 // Play Move
-                //Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
                 while (status == GameStatus.Paused) yield return new WaitForSeconds(1f);
                 while (SoundManager.Shared.isSpeaking) yield return new WaitForSeconds(0.5f);
                 computerPlayer.PlayMove(evaluationHandle.Result);
