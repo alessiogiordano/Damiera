@@ -55,18 +55,6 @@ public class CameraManager : MonoBehaviour
                 progress = progress - (_settedRotationAnimation.Item3 - 1.0f);
                 _settedRotationAnimation.Item3 = 1.0f;
             }
-            /*
-            if (_settedRotationAnimation.Item3 < 0.5)
-            {
-                viewport.transform.localEulerAngles = new Vector3(viewport.transform.localEulerAngles.x + (xVariation * progress), viewport.transform.localEulerAngles.y, 0f);
-                viewport.transform.localEulerAngles = new Vector3(viewport.transform.localEulerAngles.x, viewport.transform.localEulerAngles.y + (yVariation * progress), 0f);
-            }
-            else
-            {
-                viewport.Rotate(xVariation * progress, 0.0f, 0.0f, Space.Self);
-                viewport.Rotate(0.0f, yVariation * progress, 0.0f, Space.World);
-            }
-            */
             viewport.Rotate(xVariation * progress, 0.0f, 0.0f, Space.Self);
             viewport.Rotate(0.0f, yVariation * progress, 0.0f, Space.World);
             yield return null;

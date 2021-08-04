@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 public class UXManager : MonoBehaviour
 {
     // Welcome Screen
+    [SerializeField] private CanvasScaler scaler;
     [SerializeField] private GameObject welcomeRoot;
         private int welcomeLocation = 0;
         [SerializeField] private GameObject welcomePageOne;
@@ -163,8 +164,34 @@ public class UXManager : MonoBehaviour
         tooltipTriggers.triggers.Add(leaveEntry);
         
         // Main Views
+        StartCoroutine("UpdateDPI");
         if(PersistanceManager.firstLoad) ShowWelcome();
         else ShowMain();
+    }
+
+    IEnumerator UpdateDPI()
+    {
+        HdpiScaling preference = PersistanceManager.hdpiScaling;
+        bool autoUpdate = preference == HdpiScaling.Auto;
+        do
+        {
+            switch (preference)
+            {
+                case HdpiScaling.Single: scaler.scaleFactor = 1f; break;
+                case HdpiScaling.Half: scaler.scaleFactor = 1.5f; break;
+                case HdpiScaling.Double: scaler.scaleFactor = 2f; break;
+                case HdpiScaling.Auto: 
+                    float dpi = scaler.scaleFactor = Screen.dpi;
+                    if (dpi == 0) scaler.scaleFactor = 1f;
+                    else
+                    {
+                        float displayScale = (dpi / 100);
+                        scaler.scaleFactor = (displayScale < 1.5f) ? 1f : (displayScale < 2f) ? 1.5f : 2f;
+                    } 
+                    break;
+            }
+            yield return new WaitForSeconds(1f);
+        } while (autoUpdate);
     }
     void HideAll()
     {
@@ -321,11 +348,7 @@ public class UXManager : MonoBehaviour
             label.text = $"Il computer pensa {value} {(value != 1 ? "mosse" : "mossa")} in anticipo";
         }
         void PreferencesDifficultySlider() => DifficultySlider(preferencesDifficultySlider.value, preferencesDifficultyLabel);
-        void TestVolume(float value)
-        {
-            // TODO: emit a beep at the specified value
-            Debug.Log($"BEEP {value}");
-        }
+        void TestVolume(float value) => SoundManager.Shared.Feedback(value);
         void TestSoundVolume() => TestVolume(preferencesSoundSlider.value);
         void TestMusicVolume() => TestVolume(preferencesMusicSlider.value);
         void RenderPreferences()
@@ -351,6 +374,8 @@ public class UXManager : MonoBehaviour
             PersistanceManager.soundtrack = preferencesSoundtrackToggle.isOn;
             PersistanceManager.soundVolume = (int) preferencesSoundSlider.value;
             PersistanceManager.musicVolume = (int) preferencesMusicSlider.value;
+            StopCoroutine("UpdateDPI");
+            StartCoroutine("UpdateDPI");
         }
     void ShowNew(int index)
     {
@@ -383,6 +408,7 @@ public class UXManager : MonoBehaviour
         {
             HideAll();
             ShowStatus();
+            if (SoundManager.Shared != null && PersistanceManager.soundtrack) SoundManager.Shared.enableSoundtrack = true;
         }
     void ShowStatus(string initialText = "")
     {
@@ -395,6 +421,8 @@ public class UXManager : MonoBehaviour
     {
         if (GameManager.Shared != null)
             GameManager.Shared.PauseGame();
+        if (SoundManager.Shared != null)
+            SoundManager.Shared.RegisterHandler(RenderNowPlaying);
         RenderPause();
         pauseRoot.SetActive(true);
     }
@@ -408,13 +436,22 @@ public class UXManager : MonoBehaviour
             PauseSaveButton();
             if (GameManager.Shared != null)
                 GameManager.Shared.QuitGame();
+            if (SoundManager.Shared != null)
+                SoundManager.Shared.UnregisterHandler(RenderNowPlaying);
             HideAll();
+            if (SoundManager.Shared != null)
+            {
+                SoundManager.Shared.enableSoundtrack = false;
+                SoundManager.Shared.StopAllSpeaking();
+            }
             ShowMain();
         }
         void PauseOKButton()
         {
             if (GameManager.Shared != null)
                 GameManager.Shared.ResumeGame();
+            if (SoundManager.Shared != null)
+                SoundManager.Shared.UnregisterHandler(RenderNowPlaying);
             pauseRoot.SetActive(false);
         }
         void PauseWhiteWithdrawalButton()
@@ -434,6 +471,8 @@ public class UXManager : MonoBehaviour
         }
         void RenderPause()
         {
+            var nowPlaying = (SoundManager.Shared != null) ? SoundManager.Shared.nowPlaying : ("", 0, 0);
+            RenderNowPlaying(nowPlaying.Item1, nowPlaying.Item2, nowPlaying.Item3);
             var gameStats = (0, "", "", 0, 0, 0, 0, 0, 0, true);
             if (GameManager.Shared != null)
                 gameStats = GameManager.Shared.detailedStats;
@@ -448,11 +487,35 @@ public class UXManager : MonoBehaviour
             pauseWhiteWithdrawalButton.interactable = !gameStats.Item10;
             pauseDrawButton.interactable = !gameStats.Item10;
             pauseBlackWithdrawalButton.interactable = !gameStats.Item10;
-            
-            pauseNowPlayingTitle.text = "―";
-            pauseNowPlayingStatus.text = "Nessun brano in riproduzione";
-            pauseNowPlayingElapsed.text = "-:--";
-            pauseNowPlayingTotal.text = "-:--";
-            pauseNowPlayingSlider.value = 0f;
         }
+        public void RenderNowPlaying(string title, float elapsed, float total)
+        {
+            pauseNowPlayingTitle.text = (title != "") ? title : "―";
+            pauseNowPlayingStatus.text = (total > 0) ? "In riproduzione" : "Nessun brano in riproduzione";
+            pauseNowPlayingElapsed.text = (total > 0) ? FormatMinutesSeconds(elapsed) : "-:--";
+            pauseNowPlayingTotal.text = (total > 0) ? FormatMinutesSeconds(total) : "-:--";
+            pauseNowPlayingSlider.value = (total > 0) ? elapsed / total : 0;
+        }
+        string FormatMinutesSeconds(float value)
+        {
+            int integerValue = (int) value;
+            int minutes = (integerValue - (integerValue % 60)) / 60;
+            int seconds = integerValue % 60;
+            return (seconds < 10) ? $"{minutes}:0{seconds}" : $"{minutes}:{seconds}";
+        }
+    [ContextMenu("Test Alert")]
+    public void TestAlert() => ShowAlert();
+    public void ShowAlert(string message = "Messaggio della notifica")
+    {
+        if (pauseRoot.activeSelf) return;
+        StopCoroutine("HideAlert");
+        alertText.text = message;
+        alertRoot.SetActive(true);
+        StartCoroutine("HideAlert");
+    }
+    IEnumerator HideAlert()
+    {
+        yield return new WaitForSeconds(5f);
+        alertRoot.SetActive(false);
+    }
 }

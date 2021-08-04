@@ -89,7 +89,6 @@ public struct BoardTurn
         (BoardCell[] newLayout, bool[] newDamaLayout, bool hasMoved, bool hasCaptured, bool hasGraduated) = move.ApplyTo(_layout, _damaLayout);
         this._layout = newLayout;
         this._damaLayout = newDamaLayout;
-        currentPlayer.AddScore(move.moveScore);
         return (turnNotOver, hasMoved, hasCaptured, hasGraduated);
     }
 
@@ -97,7 +96,7 @@ public struct BoardTurn
     {
         BoardTurn nextTurn = new BoardTurn(adversaryPlayer, currentPlayer, _layout, _damaLayout);
         Player winner = nextTurn.CheckConclusion();
-        if (turnCamera && (winner == null)) CameraManager.Shared.TurnCameraToDefault(180f * ((int) nextTurn.currentPlayer.color), true, 1.0f);
+        if (turnCamera && (winner == null) && PersistanceManager.autoRotate) CameraManager.Shared.TurnCameraToDefault(180f * ((int) nextTurn.currentPlayer.color), true, 1.0f);
         return (nextTurn, winner);
     }
 

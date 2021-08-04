@@ -73,7 +73,7 @@ public class BoardMove
                 if (layout.Length == damaLayout.Length)
                 {
                     bool becameDama = (this.destination.GetOwner(newLayout) == PlayerColor.White) ? this.destination.indices.Item2 == 7 : this.destination.indices.Item2 == 0;
-                    if (newDamaLayout[this.destination.GetIndex(newLayout)] != becameDama) hasGraduated = true;
+                    if (!newDamaLayout[this.destination.GetIndex(newLayout)] && becameDama) hasGraduated = true;
                     newDamaLayout[this.destination.GetIndex(newLayout)] = newDamaLayout[this.destination.GetIndex(newLayout)] || becameDama;
                 }
             }

@@ -200,7 +200,7 @@ public static class PersistanceManager
             if (hasRecord)
             {
                 return  "Record: " + PlayerPrefs.GetInt($"HIGHSCORE{1}-SCORE")
-                    + " punti di " + PlayerPrefs.GetString($"HIGHSCORE{1}-PLAYERNAME")
+                    + " punt" + (PlayerPrefs.GetInt($"HIGHSCORE{1}-SCORE") == 1 ? "o" : "i") + " di " + PlayerPrefs.GetString($"HIGHSCORE{1}-PLAYERNAME")
                     + " contro " + PlayerPrefs.GetString($"HIGHSCORE{1}-ADVERSARYNAME")
                     + " (" + FormattedDate(DateFromTimestamp(PlayerPrefs.GetInt($"HIGHSCORE{1}-TIMESTAMP"))) + ")";
             }
@@ -220,7 +220,7 @@ public static class PersistanceManager
                 if (PlayerPrefs.HasKey($"HIGHSCORE{i+1}-TIMESTAMP"))
                 {
                     result[i] = PlayerPrefs.GetInt($"HIGHSCORE{i+1}-SCORE")
-                    + " punti di " + PlayerPrefs.GetString($"HIGHSCORE{i+1}-PLAYERNAME")
+                    + " punt" + (PlayerPrefs.GetInt($"HIGHSCORE{i+1}-SCORE") == 1 ? "o" : "i") + " di " + PlayerPrefs.GetString($"HIGHSCORE{i+1}-PLAYERNAME")
                     + " contro " + PlayerPrefs.GetString($"HIGHSCORE{i+1}-ADVERSARYNAME")
                     + " (" + FormattedDate(DateFromTimestamp(PlayerPrefs.GetInt($"HIGHSCORE{i+1}-TIMESTAMP"))) + ")";
                 }
@@ -275,7 +275,6 @@ public static class PersistanceManager
             PlayerPrefs.SetInt($"HIGHSCORE{ranking}-TIMESTAMP", Timestamp());
             PlayerPrefs.Save();
         }
-        Debug.Log(ranking);
     }
     public static void DeleteScoreboard()
     {

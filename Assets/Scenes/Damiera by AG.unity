@@ -2065,7 +2065,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &185749235
 GameObject:
@@ -10732,6 +10732,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25e64686544414d94af466eddb2630ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  scaler: {fileID: 1128482207}
   welcomeRoot: {fileID: 1221939596}
   welcomePageOne: {fileID: 2038395292}
   welcomePageTwo: {fileID: 834470851}
@@ -12658,8 +12659,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.25}
   m_AnchorMax: {x: 1, y: 0.75}
-  m_AnchoredPosition: {x: -5, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1153984258
 GameObject:
@@ -19025,6 +19026,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   beep: {fileID: 8300000, guid: 31ce16611562f480682ae9c09b6388e7, type: 3}
+  feedback: {fileID: 8300000, guid: 4680c53f68df24e35b7c97736ba84d29, type: 3}
+  soundtrack:
+  - {fileID: 8300000, guid: 7cf287148974d4c60a8badf72cf97a13, type: 3}
+  - {fileID: 8300000, guid: 7b72d1002a6544c99b6ee63a88f04593, type: 3}
+  - {fileID: 8300000, guid: 72fafe21c04284b7295c2c0d7514b699, type: 3}
+  - {fileID: 8300000, guid: e2b2509e7c3c8472792c22d572b019d4, type: 3}
+  - {fileID: 8300000, guid: 6d4035b0ab2364f188a6e6d4d2066744, type: 3}
+  titles:
+  - 'Chopin: "Tristezze"'
+  - 'Addinsell: "Concerto Di Varsavia"'
+  - 'Beethoven: "Sonata Al Chiaro Di Luna"'
+  - 'Liszt: "O Lieb"'
+  - 'Mozart: "Marcia Turca"'
 --- !u!1 &1784299784
 GameObject:
   m_ObjectHideFlags: 0
@@ -19121,7 +19135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1790427392
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21823,7 +21837,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 10, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2032467286
 MonoBehaviour:

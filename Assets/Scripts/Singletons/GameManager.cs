@@ -71,6 +71,15 @@ public class GameManager : MonoBehaviour
     private BoardTurn turn;
     private PlayerColor conclusion;
 
+    private BoardCell[] _chainSpeak = new BoardCell[0];
+    private void PushCapturedCell(BoardCell cell)
+    {
+        Array.Resize(ref _chainSpeak, _chainSpeak.Length + 1);
+        _chainSpeak[_chainSpeak.Length - 1] = cell;
+    }
+    private void FlushCapturedCells() => _chainSpeak = new BoardCell[0];
+    private BoardCell[] GetCapturedCells() => _chainSpeak;
+
     private GameStatus _status;
     private int selectedSlot;
     public GameStatus status { get => _status; }
@@ -177,6 +186,10 @@ public class GameManager : MonoBehaviour
             else
                 conclusion = (PlayerColor) (-1);
             UXManager.Shared.UpdateStatus(shortStats);
+            if ( ((turn.currentPlayer == whitePlayer) && (whitePlayer is ComputerPlayer) && (blackPlayer is HumanPlayer))
+                    || ((turn.currentPlayer == blackPlayer) && (blackPlayer is HumanPlayer))
+                ) CameraManager.Shared.TurnCameraToDefault(180);
+                else CameraManager.Shared.TurnCameraToDefault();
             StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
         }
         else
@@ -194,6 +207,8 @@ public class GameManager : MonoBehaviour
         turn = new BoardTurn(whitePlayer, blackPlayer, layout, damaLayout);
         conclusion = (PlayerColor) (-1);
         UXManager.Shared.UpdateStatus(shortStats);
+        if ((whitePlayer is ComputerPlayer) && (blackPlayer is HumanPlayer)) CameraManager.Shared.TurnCameraToDefault(180);
+        else CameraManager.Shared.TurnCameraToDefault();
         StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
     }
     // Draw and Retirement
@@ -211,18 +226,26 @@ public class GameManager : MonoBehaviour
             var stats = detailedStats;
             bool isCurrentHuman = turn.currentPlayer is HumanPlayer;
             bool isAdversaryHuman = turn.adversaryPlayer is HumanPlayer;
+            bool isWhiteHuman = turn.currentPlayer.color == PlayerColor.White ? isCurrentHuman : isAdversaryHuman;
+            bool isBlackHuman = turn.adversaryPlayer.color == PlayerColor.Black ? isAdversaryHuman : isCurrentHuman;
             int difficultyLevel = (turn.currentPlayer is ComputerPlayer) ? ((ComputerPlayer) turn.currentPlayer).movesAhead
                                 : (turn.adversaryPlayer is ComputerPlayer) ? ((ComputerPlayer) turn.adversaryPlayer).movesAhead
                                 : (int) PersistanceManager.computerDifficulty;
             PersistanceManager.SaveSlot(selectedSlot, stats.Item2, stats.Item3,
-                                turn.currentPlayer.color == PlayerColor.White ? isCurrentHuman : isAdversaryHuman,
-                                turn.adversaryPlayer.color == PlayerColor.Black ? isAdversaryHuman : isCurrentHuman,
+                                isWhiteHuman, isBlackHuman,
                                 stats.Item6, stats.Item9, difficultyLevel,
                                 stats.Item10, stats.Item10 ? conclusion : turn.currentPlayer.color,
                                 layout, damaLayout
                                );
-            if (stats.Item6 >= stats.Item9) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
-            else PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
+            // Save score only if game is concluded and player is human
+            if (stats.Item10)
+            {
+                if (isWhiteHuman && isBlackHuman)
+                    if (stats.Item6 >= stats.Item9) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
+                    else PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
+                else if (isWhiteHuman) PersistanceManager.RegisterRecord(stats.Item6, stats.Item2, stats.Item3);
+                else if (isBlackHuman) PersistanceManager.RegisterRecord(stats.Item9, stats.Item3, stats.Item2);
+            }
         }
     }
     public void QuitGame()
@@ -260,7 +283,6 @@ public class GameManager : MonoBehaviour
             pedinaPool[i].GetComponent<Pedina>().Setup(i, root, layout[i], color, pedinaBianca, pedinaNera);
         }
         pedinaPoolReady = true;
-        CameraManager.Shared.TurnCameraToDefault();
         _status = GameStatus.Running;
     }
     void UnsetBoard()
@@ -328,7 +350,8 @@ public class GameManager : MonoBehaviour
     {
         if (hit.cell != null)
         {
-            (bool hasMoved, bool hasCaptured, bool mustChainCapture) = MoveAction(hit);
+            BoardCell sourceCell = (selectedPedina != null) ? selectedPedina.GetComponent<Pedina>().cell : BoardCell.invalidCell; // Voiceover
+            (bool hasMoved, bool hasCaptured, bool mustChainCapture, bool hasGraduated) = MoveAction(hit);
             // React to move
             if (!hasMoved)
                 SoundManager.Shared.Beep();
@@ -340,12 +363,28 @@ public class GameManager : MonoBehaviour
                 }
                 else {
                     forcedSelection = null;
-                    bool rotateCamera = turn.adversaryPlayer is HumanPlayer;
+                    bool isComputer = turn.currentPlayer is ComputerPlayer;
+                    bool rotateCamera = (turn.currentPlayer is HumanPlayer && turn.adversaryPlayer is HumanPlayer);
                     (BoardTurn nextTurn, Player winner) = turn.NextTurn(rotateCamera);
                     turn = nextTurn;
                     conclusion = (winner != null) ? winner.color : (PlayerColor)(-1);
                     UXManager.Shared.UpdateStatus(shortStats);
-                    if (conclusion == (PlayerColor)(-1)) StartCoroutine("TryComputerPlay");
+                    if (conclusion == (PlayerColor)(-1))
+                    {
+                        if (isComputer)
+                        {
+                            if (hasGraduated) SoundManager.Shared.SpeakDama(hit);
+                            else if (hasCaptured) SoundManager.Shared.SpeakCapture(GetCapturedCells(), selectedPedina.GetComponent<Pedina>().dama);
+                            else if (hasMoved) SoundManager.Shared.SpeakMove(sourceCell, hit, selectedPedina.GetComponent<Pedina>().dama);
+                        }
+                        StartCoroutine("TryComputerPlay");
+                    }
+                    else
+                    {
+                        if (turn.currentPlayer is ComputerPlayer || turn.adversaryPlayer is ComputerPlayer)
+                            SoundManager.Shared.SpeakVictory(conclusion);
+                    }
+                    FlushCapturedCells();
                 }
             }
             if (forcedSelection == null && selectedPedina != null)
@@ -358,20 +397,20 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // (hasMoved, hasCaptured, mustChainCapture)
-    public (bool, bool, bool) MoveAction(BoardCell hit)
+    // (hasMoved, hasCaptured, mustChainCapture, hasGraduated)
+    public (bool, bool, bool, bool) MoveAction(BoardCell hit)
     {
         if (selectedPedina != null)
         {
             // Validate Move and do something with it
             BoardCell source = selectedPedina.GetComponent<Pedina>().cell;
             bool isDama = selectedPedina.GetComponent<Pedina>().dama;
-            //if (layout.AvailableDestinations(source, isDama).Contains(hit))
             int moveIndex = turn.Check(source, hit);
             if (moveIndex != -1)
             {
                 BoardMove move = turn.moves[moveIndex];
                 (bool turnNotOver, bool hasMoved, bool hasCaptured, bool hasGraduated) = turn.Procede(move);
+                turn.currentPlayer.AddScore(move.moveScore);
                 // Move
                 selectedPedina.GetComponent<Pedina>().cell = hit;
                 // Check if dama
@@ -383,27 +422,28 @@ public class GameManager : MonoBehaviour
                 // Check if captured
                 if(hasCaptured)
                 {
+                    PushCapturedCell(move.capture);
                     GetInstanceFromCell(move.capture).GetComponent<Pedina>().captured = true;
                     if (turnNotOver)
-                        return (true, true, true);
+                        return (true, true, true, hasGraduated);
                     else
                     {
-                        return (true, true, false);
+                        return (true, true, false, hasGraduated);
                     }
                 }
                 else
                 {
-                    return (true, false, false);
+                    return (true, false, false, hasGraduated);
                 }
             }
             else
             {
-                return (false, false, false);
+                return (false, false, false, false);
             }
         }
         else
         {
-            return (false, false, false);
+            return (false, false, false, false);
         }
     }
 
@@ -424,6 +464,8 @@ public class GameManager : MonoBehaviour
                 yield return new WaitForSeconds(waitTime);
                 // Play Move
                 //Debug.Log("Computer thinks that " + evaluationHandle.Result.ToString() + " is its best move");
+                while (status == GameStatus.Paused) yield return new WaitForSeconds(1f);
+                while (SoundManager.Shared.isSpeaking) yield return new WaitForSeconds(0.5f);
                 computerPlayer.PlayMove(evaluationHandle.Result);
             } else Debug.Log("Computer is stuck");
         }
@@ -434,5 +476,22 @@ public class GameManager : MonoBehaviour
             yield return new WaitForSeconds(1.1f);
             computerPlayer.PlayMove(turn.moves[0]);
         }
+    }
+
+    void OnApplicationQuit() => SaveGame();
+
+    [ContextMenu("Test End")]
+    void TestEnd()
+    {
+        layout = new BoardCell[24] {
+             new BoardCell(0,0), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell,
+             new BoardCell(7,7), BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell, BoardCell.invalidCell
+         };
+        turn = new BoardTurn(turn.currentPlayer, turn.adversaryPlayer, layout, damaLayout);
+    }
+    [ContextMenu("Print Valid Cells")]
+    void PrintValidCells()
+    {
+        BoardCell.validCells.DebugString();
     }
 }
