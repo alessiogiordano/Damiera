@@ -179,17 +179,19 @@ public class GameManager : MonoBehaviour
             if (loadedGame.Item10 == PlayerColor.Black)       
                 turn = new BoardTurn(blackPlayer, whitePlayer, loadedGame.Item11, loadedGame.Item12);
             else turn = new BoardTurn(whitePlayer, blackPlayer, loadedGame.Item11, loadedGame.Item12);
-            // If game is done then set winner
-            if (loadedGame.Item9)
-                conclusion = loadedGame.Item10;
-            else
-                conclusion = (PlayerColor) (-1);
-            UXManager.Shared.UpdateStatus(shortStats);
             if ( ((turn.currentPlayer == whitePlayer) && (whitePlayer is ComputerPlayer) && (blackPlayer is HumanPlayer))
                     || ((turn.currentPlayer == blackPlayer) && (blackPlayer is HumanPlayer))
                 ) CameraManager.Shared.TurnCameraToDefault(180);
                 else CameraManager.Shared.TurnCameraToDefault();
-            StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
+            // If game is done then set winner
+            if (loadedGame.Item9)
+                conclusion = loadedGame.Item10;
+            else
+            {
+                conclusion = (PlayerColor) (-1);
+                StartCoroutine("TryComputerPlay"); // Otherwise an AI vs. AI game gets stuck at start
+            }
+            UXManager.Shared.UpdateStatus(shortStats);
         }
         else
         {
